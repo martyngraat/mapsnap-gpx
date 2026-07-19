@@ -157,13 +157,6 @@ const el = {
   sliderOpacity: document.getElementById('slider-opacity'),
   opacityValue: document.getElementById('opacity-value'),
   
-  calCoords1: document.getElementById('cal-coords-1'),
-  calCoords2: document.getElementById('cal-coords-2'),
-  calRow1: document.getElementById('cal-row-1'),
-  calRow2: document.getElementById('cal-row-2'),
-  btnCalReset1: document.getElementById('btn-cal-reset-1'),
-  btnCalReset2: document.getElementById('btn-cal-reset-2'),
-  
   colorTraceOptions: document.getElementById('color-trace-options'),
   colorPreview: document.getElementById('color-preview'),
   colorRgb: document.getElementById('color-rgb'),
@@ -415,13 +408,12 @@ function handleImageUpload(e) {
       // Clear previous calibrations
       clearCalibration();
       
-      // Set to Calibration Step 1
-      setCalibrationStep(1);
+      updateModeIndicator();
       
       drawPhotoCanvas();
       updateAiButtonState();
       detectRoutes();
-      showToast('Routekaart geladen! Klik nu op Referentiepunt 1 op de foto.');
+      showToast('Routekaart geladen! Klik op Lijn Kaart Automatisch Uit.');
       
       // Switch to Photo Tab on mobile
       const photoTab = document.querySelector('[data-tab="photo-section"]');
@@ -718,43 +710,19 @@ function endPanOrAction(e) {
 
 // --- Handle Click/Tap on Photo ---
 function handlePhotoClick(x, y) {
-  // Calibration steps
-  if (state.calibrationStep === 1) { // Waiting for Photo Point 1
-    state.calibrationPoints[0].photo = { x, y };
-    drawPhotoCanvas();
-    setCalibrationStep(2);
-    showToast('Punt 1 op foto gezet! Klik nu op dezelfde locatie op de KAART.');
-    
-    // Auto switch to Map Tab on mobile to guide user
-    const mapTab = document.querySelector('[data-tab="map-section"]');
-    if (mapTab) {
-      setTimeout(() => mapTab.click(), 500);
-    }
-  } else if (state.calibrationStep === 3) { // Waiting for Photo Point 2
-    state.calibrationPoints[1].photo = { x, y };
-    drawPhotoCanvas();
-    setCalibrationStep(4);
-    showToast('Punt 2 op foto gezet! Klik nu op dezelfde locatie op de KAART.');
-    
-    const mapTab = document.querySelector('[data-tab="map-section"]');
-    if (mapTab) {
-      setTimeout(() => mapTab.click(), 500);
-    }
-  } 
-  // Color tracing trigger
-  else if (state.tracingMode === 'color' && state.isCalibrated && state.calibrationStep === 0) {
+  if (state.isCalibrated) {
     const pixel = offscreenCtx.getImageData(Math.round(x), Math.round(y), 1, 1).data;
     state.colorTarget = { r: pixel[0], g: pixel[1], b: pixel[2] };
     
     // Update preview color swatch
-    el.colorPreview.style.backgroundColor = `rgb(${state.colorTarget.r}, ${state.colorTarget.g}, ${state.colorTarget.b})`;
-    el.colorRgb.textContent = `RGB(${state.colorTarget.r}, ${state.colorTarget.g}, ${state.colorTarget.b})`;
+    if (el.colorPreview) el.colorPreview.style.backgroundColor = `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
+    if (el.colorRgb) el.colorRgb.textContent = `RGB(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
     
     showToast('Kleur geselecteerd. Route wordt getraceerd...');
     
     // Run color tracing algorithm
     setTimeout(() => {
-      const tracePoints = traceColorRoute(x, y, state.colorTarget.r, state.colorTarget.g, state.colorTarget.b);
+      const tracePoints = traceColorRoute(x, y, pixel[0], pixel[1], pixel[2]);
       if (tracePoints.length > 2) {
         processDrawingPath(tracePoints);
         showToast(`Route getraceerd met ${tracePoints.length} punten!`);
@@ -762,6 +730,8 @@ function handlePhotoClick(x, y) {
         showToast('Traceren mislukt. Verhoog de tolerantie of kies een ander startpunt.', 'error');
       }
     }, 50);
+  } else {
+    showToast('De kaart is nog niet uitgelijnd. Lijn de kaart eerst uit via Stap 1.', 'error');
   }
 }
 
@@ -789,203 +759,50 @@ function processDrawingPath(pixelPath) {
 
 // --- Map Click Handler ---
 function onMapClick(e) {
-  // Calibration steps on map
-  if (state.calibrationStep === 2) { // Waiting for Map Point 1
-    state.calibrationPoints[0].map = e.latlng;
-    
-    // Add map marker
-    addCalMapMarker(0, e.latlng);
-    
-    // Advance step
-    setCalibrationStep(3);
-    showToast('Punt 1 gekoppeld! Klik nu op Referentiepunt 2 op de FOTO.');
-    
-    // Switch to Photo Tab on mobile
-    const photoTab = document.querySelector('[data-tab="photo-section"]');
-    if (photoTab) {
-      setTimeout(() => photoTab.click(), 500);
-    }
-  } else if (state.calibrationStep === 4) { // Waiting for Map Point 2
-    state.calibrationPoints[1].map = e.latlng;
-    
-    // Add map marker
-    addCalMapMarker(1, e.latlng);
-    
-    // Calibration ready! Calculate transformation
-    calculateCalibrationMatrix();
-  }
+  // Manual point picking removed.
 }
 
-// --- Set Calibration Steps & Update UI ---
-function setCalibrationStep(step) {
-  state.calibrationStep = step;
-  
-  // Update status sidebar rows highlights
-  el.calRow1.classList.remove('active');
-  el.calRow2.classList.remove('active');
-  
-  if (step === 1) {
-    el.modeIndicator.textContent = "Kalibratie: Tik op Referentiepunt 1 op de foto";
-    el.calRow1.classList.add('active');
-    el.calCoords1.textContent = "Wachten op foto klik...";
-  } else if (step === 2) {
-    el.modeIndicator.textContent = "Kalibratie: Klik op Referentiepunt 1 op de kaart";
-    el.calCoords1.textContent = "Kies punt op kaart";
-  } else if (step === 3) {
-    el.modeIndicator.textContent = "Kalibratie: Tik op Referentiepunt 2 op de foto";
-    el.calRow2.classList.add('active');
-    el.calCoords2.textContent = "Wachten op foto klik...";
-  } else if (step === 4) {
-    el.modeIndicator.textContent = "Kalibratie: Klik op Referentiepunt 2 op de kaart";
-    el.calCoords2.textContent = "Kies punt op kaart";
+function updateModeIndicator() {
+  if (state.isCalibrated) {
+    el.modeIndicator.textContent = "Kleur-volger actief: Tik op de routelijn in de foto";
   } else {
-    // Calibrated or tracing
-    if (state.isCalibrated) {
-      el.modeIndicator.textContent = state.tracingMode === 'manual' 
-        ? "Tekenmodus: Sleep je vinger/muis over de route op de foto"
-        : "Kleur-volger: Tik op de routelijn in de foto";
-    } else {
-      el.modeIndicator.textContent = "Foto geladen. Start kalibratie.";
-    }
+    el.modeIndicator.textContent = "Lijn de kaart eerst automatisch uit via Stap 1";
   }
 }
 
-function addCalMapMarker(idx, latlng) {
-  if (state.calibrationPoints[idx].marker) {
-    map.removeLayer(state.calibrationPoints[idx].marker);
+function clearCalibration() {
+  state.isCalibrated = false;
+  state.transform = null;
+  
+  if (state.photoOverlay) {
+    map.removeLayer(state.photoOverlay);
+    state.photoOverlay = null;
   }
   
-  const iconHtml = `<div class="map-marker-pin ${idx === 0 ? 'marker-color-1' : 'marker-color-2'}"><span>${idx + 1}</span></div>`;
-  const customIcon = L.divIcon({
-    html: iconHtml,
-    className: 'custom-div-icon',
-    iconSize: [24, 40],
-    iconAnchor: [12, 40]
+  state.calibrationPoints.forEach(pt => {
+    if (pt.marker) {
+      map.removeLayer(pt.marker);
+      pt.marker = null;
+    }
+    pt.photo = null;
+    pt.map = null;
   });
   
-  state.calibrationPoints[idx].marker = L.marker(latlng, { icon: customIcon, draggable: false }).addTo(map);
+  el.statusCalibration.textContent = 'Niet uitgelijnd';
+  el.statusCalibration.className = 'badge badge-secondary';
   
-  // Update control panel coords text
-  const coordStr = `${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
-  if (idx === 0) {
-    el.calCoords1.textContent = coordStr;
-    el.btnCalReset1.style.display = 'block';
-  } else {
-    el.calCoords2.textContent = coordStr;
-    el.btnCalReset2.style.display = 'block';
-  }
-}
-
-// Reset calibration points individually
-el.btnCalReset1.addEventListener('click', (e) => {
-  e.stopPropagation();
-  resetCalibrationPoint(0);
-});
-el.btnCalReset2.addEventListener('click', (e) => {
-  e.stopPropagation();
-  resetCalibrationPoint(1);
-});
-
-function resetCalibrationPoint(idx) {
-  if (state.calibrationPoints[idx].marker) {
-    map.removeLayer(state.calibrationPoints[idx].marker);
-    state.calibrationPoints[idx].marker = null;
-  }
-  state.calibrationPoints[idx].photo = null;
-  state.calibrationPoints[idx].map = null;
-  
-  state.isCalibrated = false;
-  removePhotoOverlay();
-  
-  if (idx === 0) {
-    el.calCoords1.textContent = "Niet gekoppeld";
-    el.btnCalReset1.style.display = 'none';
-    setCalibrationStep(1);
-  } else {
-    el.calCoords2.textContent = "Niet gekoppeld";
-    el.btnCalReset2.style.display = 'none';
-    setCalibrationStep(3);
-  }
-  
-  el.statusCalibration.textContent = 'Niet gekalibreerd';
-  el.statusCalibration.className = 'badge badge-error';
   el.btnCalClear.classList.add('hidden');
   el.opacityControl.classList.add('hidden');
   el.btnToggleOverlay.classList.add('hidden');
   
+  updateModeIndicator();
   drawPhotoCanvas();
-}
-
-function clearCalibration() {
-  resetCalibrationPoint(0);
-  resetCalibrationPoint(1);
-  state.transform = null;
-  setCalibrationStep(0);
 }
 
 el.btnCalClear.addEventListener('click', () => {
   clearCalibration();
-  setCalibrationStep(1);
-  showToast('Kalibratie gewist. Begin opnieuw.');
-  
-  const photoTab = document.querySelector('[data-tab="photo-section"]');
-  if (photoTab) photoTab.click();
+  showToast('AI-uitlijning gewist.');
 });
-
-// --- Compute Georeferencing Transformation ---
-function calculateCalibrationMatrix() {
-  const p1 = state.calibrationPoints[0].photo;
-  const p2 = state.calibrationPoints[1].photo;
-  const latlng1 = state.calibrationPoints[0].map;
-  const latlng2 = state.calibrationPoints[1].map;
-  
-  if (!p1 || !p2 || !latlng1 || !latlng2) return;
-  
-  // Project Map LatLng coordinates to flat pixel coordinates at zoom level 18
-  const zoom = 18;
-  const m1 = map.project(latlng1, zoom);
-  const m2 = map.project(latlng2, zoom);
-  
-  const dx = p2.x - p1.x;
-  const dy = p2.y - p1.y;
-  const dX = m2.x - m1.x;
-  const dY = m2.y - m1.y;
-  
-  const denom = dx * dx + dy * dy;
-  if (denom === 0) {
-    showToast('Kalibratiepunten liggen te dicht bij elkaar!', 'error');
-    clearCalibration();
-    setCalibrationStep(1);
-    return;
-  }
-  
-  // Similarity transform coefficients
-  const a = (dX * dx + dY * dy) / denom;
-  const b = (dY * dx - dX * dy) / denom;
-  
-  const cx = m1.x - a * p1.x + b * p1.y;
-  const cy = m1.y - b * p1.x - a * p1.y;
-  
-  state.transform = { a, b, cx, cy, zoom };
-  state.isCalibrated = true;
-  
-  // Update status labels
-  el.statusCalibration.textContent = 'Gekalibreerd';
-  el.statusCalibration.className = 'badge badge-success';
-  el.btnCalClear.classList.remove('hidden');
-  el.opacityControl.classList.remove('hidden');
-  el.btnToggleOverlay.classList.remove('hidden');
-  
-  // Add photo overlay layer to Leaflet map
-  addPhotoOverlay();
-  
-  setCalibrationStep(0); // Normal tracing ready
-  showToast('Kalibratie compleet! Teken nu de route op de foto.');
-  
-  // Center map on the georeferenced overlay area
-  const overlayCenter = photoToLatLng(state.imageWidth / 2, state.imageHeight / 2);
-  map.setView(overlayCenter, 15);
-}
 
 // Bidirectional Georeferencing math
 function photoToLatLng(x, y) {
@@ -1369,21 +1186,6 @@ el.chkSnapBrouter.addEventListener('change', (e) => {
 el.selectProfile.addEventListener('change', (e) => {
   state.brouterProfile = e.target.value;
   updateRoute();
-});
-
-// Tracing Mode switches
-document.querySelectorAll('input[name="tracing-mode"]').forEach(radio => {
-  radio.addEventListener('change', (e) => {
-    state.tracingMode = e.target.value;
-    
-    if (state.tracingMode === 'color') {
-      el.colorTraceOptions.classList.remove('hidden');
-    } else {
-      el.colorTraceOptions.classList.add('hidden');
-    }
-    
-    setCalibrationStep(0); // refresh instructions
-  });
 });
 
 el.sliderTolerance.addEventListener('input', (e) => {
@@ -1884,7 +1686,7 @@ function runAiGeoreference() {
       const centerLatLng = photoToLatLng(state.imageWidth / 2, state.imageHeight / 2);
       map.setView(centerLatLng, 15);
       
-      setCalibrationStep(0);
+      updateModeIndicator();
       drawPhotoCanvas();
     });
   })
