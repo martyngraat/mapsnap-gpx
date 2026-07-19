@@ -413,7 +413,13 @@ function handleImageUpload(e) {
       drawPhotoCanvas();
       updateAiButtonState();
       detectRoutes();
-      showToast('Routekaart geladen! Klik op Lijn Kaart Automatisch Uit.');
+      
+      const apiKey = el.inputApiKey.value.trim();
+      if (apiKey) {
+        runAiGeoreference();
+      } else {
+        showToast('Routekaart geladen! Voer een Gemini API-sleutel in onder Stap 1 om automatisch uit te lijnen.', 'error');
+      }
       
       // Switch to Photo Tab on mobile
       const photoTab = document.querySelector('[data-tab="photo-section"]');
