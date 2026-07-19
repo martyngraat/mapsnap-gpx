@@ -31,9 +31,9 @@ const state = {
   photoOverlay: null, // Custom Leaflet layer
   
   // Tracing & Routes
-  tracingMode: 'manual', // 'manual' or 'color'
+  tracingMode: 'color', // Default to automatic color recognition
   colorTolerance: 40,
-  colorTarget: null,     // { r, g, b }
+  colorTarget: { r: 220, g: 38, b: 38 }, // Red default
   
   rawPoints: [],       // Array of {x, y} relative to original image size
   controlPoints: [],   // Array of L.LatLng (simplified keypoints for BRouter)
@@ -240,6 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initMap();
   setupEventListeners();
   initAiAssistant();
+  initColorPalette();
   
   // Show guide on first launch
   if (!localStorage.getItem('mapsnap_guide_seen')) {
@@ -1751,4 +1752,96 @@ function runAiLocationAnalysis() {
     updateAiButtonState();
     showToast(`AI Fout: ${err.message}`, 'error');
   });
+}
+
+// --- Color Palette Presets & Auto-Tracing ---
+function initColorPalette() {
+  const presetBtns = document.querySelectorAll('.color-preset-btn');
+  const colorPicker = document.getElementById('input-color-picker');
+  
+  function selectHexColor(hex) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    
+    state.colorTarget = { r, g, b };
+    
+    if (el.colorPreview) el.colorPreview.style.backgroundColor = hex;
+    if (el.colorRgb) el.colorRgb.textContent = `RGB(${r}, ${g}, ${b})`;
+    if (colorPicker) colorPicker.value = hex;
+    
+    if (state.isCalibrated && state.image) {
+      autoTraceColorPreset(r, g, b);
+    }
+  }
+  
+  presetBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      presetBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const hex = btn.getAttribute('data-color');
+      selectHexColor(hex);
+    });
+  });
+  
+  if (colorPicker) {
+    colorPicker.addEventListener('input', (e) => {
+      presetBtns.forEach(b => b.classList.remove('active'));
+      selectHexColor(e.target.value);
+    });
+  }
+}
+
+function autoTraceColorPreset(targetR, targetG, targetB) {
+  if (!state.image || !offscreenCtx) return;
+  
+  const w = state.imageWidth;
+  const h = state.imageHeight;
+  const data = offscreenCtx.getImageData(0, 0, w, h).data;
+  const tolerance = parseInt(el.sliderTolerance.value);
+  
+  let bestX = -1, bestY = -1;
+  let maxMatchCount = 0;
+  
+  const stepX = Math.max(1, Math.floor(w / 35));
+  const stepY = Math.max(1, Math.floor(h / 35));
+  
+  for (let y = stepY; y < h; y += stepY) {
+    for (let x = stepX; x < w; x += stepX) {
+      const idx = (y * w + x) * 4;
+      const dist = Math.sqrt((data[idx] - targetR)**2 + (data[idx+1] - targetG)**2 + (data[idx+2] - targetB)**2);
+      if (dist < tolerance) {
+        let localCount = 0;
+        for (let dy = -6; dy <= 6; dy += 3) {
+          for (let dx = -6; dx <= 6; dx += 3) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+              const nIdx = (ny * w + nx) * 4;
+              const d = Math.sqrt((data[nIdx] - targetR)**2 + (data[nIdx+1] - targetG)**2 + (data[nIdx+2] - targetB)**2);
+              if (d < tolerance) localCount++;
+            }
+          }
+        }
+        if (localCount > maxMatchCount) {
+          maxMatchCount = localCount;
+          bestX = x;
+          bestY = y;
+        }
+      }
+    }
+  }
+  
+  if (bestX >= 0 && bestY >= 0) {
+    showToast('Kleur geselecteerd. Route wordt automatisch getraceerd...');
+    const tracePoints = traceColorRoute(bestX, bestY, targetR, targetG, targetB);
+    if (tracePoints.length > 2) {
+      processDrawingPath(tracePoints);
+      showToast(`Route getraceerd met ${tracePoints.length} punten!`);
+    } else {
+      showToast('Tik op de routelijn in de foto voor een nauwkeurig startpunt.');
+    }
+  } else {
+    showToast('Tik op de routelijn op de foto om de kleur te bepalen.');
+  }
 }

@@ -197,35 +197,40 @@
             </div>
           </div>
 
-          <!-- Section 2: Tracing Mode -->
+          <!-- Section 2: Automatic Color Route Tracing -->
           <div class="panel-group">
-            <h2 class="group-title">Stap 2: Route Digitaliseren</h2>
+            <h2 class="group-title">Stap 2: Routekleur & Auto-Traceren</h2>
+            <p class="group-description">Kies de kleur van de route op de foto of tik op de routelijn om deze automatisch te laten herkennen.</p>
             
-            <div class="radio-group">
-              <label class="radio-label">
-                <input type="radio" name="tracing-mode" value="manual" checked />
-                <span class="custom-radio"></span>
-                <span>Handmatig tekenen (Tik op de foto)</span>
-              </label>
-              <label class="radio-label">
-                <input type="radio" name="tracing-mode" value="color" />
-                <span class="custom-radio"></span>
-                <span>Kleur-volger (Automatisch traceren)</span>
+            <!-- Quick Color Presets -->
+            <div class="color-presets">
+              <button class="color-preset-btn active" data-color="#dc2626" title="Rode Route" style="background-color: #dc2626;"></button>
+              <button class="color-preset-btn" data-color="#2563eb" title="Blauwe Route" style="background-color: #2563eb;"></button>
+              <button class="color-preset-btn" data-color="#16a34a" title="Groene Route" style="background-color: #16a34a;"></button>
+              <button class="color-preset-btn" data-color="#9333ea" title="Paarse Route" style="background-color: #9333ea;"></button>
+              <button class="color-preset-btn" data-color="#ea580c" title="Oranje Route" style="background-color: #ea580c;"></button>
+              <button class="color-preset-btn" data-color="#eab308" title="Gele Route" style="background-color: #eab308;"></button>
+              <button class="color-preset-btn" data-color="#18181b" title="Zwarte Route" style="background-color: #18181b; border: 1px solid white;"></button>
+              
+              <label class="color-picker-label" title="Aangepaste kleur kiezen">
+                <input type="color" id="input-color-picker" value="#dc2626" />
+                <span class="color-picker-icon">🎨</span>
               </label>
             </div>
 
-            <!-- Color Tracing Options (hidden by default) -->
-            <div id="color-trace-options" class="hidden-panel hidden">
-              <div class="color-sample-row">
-                <span>Gekozen kleur:</span>
-                <div id="color-preview" class="color-preview-box"></div>
-                <span id="color-rgb">Geen</span>
-              </div>
-              <div class="slider-control">
-                <label for="slider-tolerance">Kleur Tolerantie: <span id="tolerance-value">40</span></label>
-                <input type="range" id="slider-tolerance" min="10" max="100" value="40" />
-              </div>
-              <p class="help-text">Tik op de route in de foto om de kleur te selecteren en de route te genereren.</p>
+            <div class="color-sample-row">
+              <span>Actieve kleur:</span>
+              <div id="color-preview" class="color-preview-box" style="background-color: #dc2626;"></div>
+              <span id="color-rgb">RGB(220, 38, 38)</span>
+            </div>
+
+            <div class="slider-control">
+              <label for="slider-tolerance">Gevoeligheid (Tolerantie): <span id="tolerance-value">40</span></label>
+              <input type="range" id="slider-tolerance" min="15" max="100" value="40" />
+            </div>
+
+            <div class="help-text">
+              👉 Tik op de routelijn op de foto om de kleur exact te bepalen en de route direct automatisch te traceren!
             </div>
           </div>
 
