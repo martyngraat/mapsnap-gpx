@@ -395,6 +395,7 @@ function handleImageUpload(e) {
       
       drawPhotoCanvas();
       updateAiButtonState();
+      detectRoutes();
       showToast('Routekaart geladen! Klik nu op Referentiepunt 1 op de foto.');
       
       // Switch to Photo Tab on mobile
@@ -964,23 +965,46 @@ function calculateCalibrationMatrix() {
 // Bidirectional Georeferencing math
 function photoToLatLng(x, y) {
   if (!state.transform) return null;
-  const { a, b, cx, cy, zoom } = state.transform;
-  const X = a * x - b * y + cx;
-  const Y = b * x + a * y + cy;
-  return map.unproject(L.point(X, Y), zoom);
+  const { zoom } = state.transform;
+  if (state.transform.type === 'affine') {
+    const { c1, c2, c3, c4, c5, c6 } = state.transform;
+    const X = c1 * x + c2 * y + c3;
+    const Y = c4 * x + c5 * y + c6;
+    return map.unproject(L.point(X, Y), zoom);
+  } else {
+    // similarity fallback
+    const { a, b, cx, cy } = state.transform;
+    const X = a * x - b * y + cx;
+    const Y = b * x + a * y + cy;
+    return map.unproject(L.point(X, Y), zoom);
+  }
 }
 
 function latLngToPhoto(latlng) {
   if (!state.transform) return null;
-  const { a, b, cx, cy, zoom } = state.transform;
+  const { zoom } = state.transform;
   const m = map.project(latlng, zoom);
-  const dX = m.x - cx;
-  const dY = m.y - cy;
-  const det = a * a + b * b;
-  if (det === 0) return null;
-  const x = (a * dX + b * dY) / det;
-  const y = (-b * dX + a * dY) / det;
-  return { x, y };
+  
+  if (state.transform.type === 'affine') {
+    const { c1, c2, c3, c4, c5, c6 } = state.transform;
+    const det = c1 * c5 - c2 * c4;
+    if (Math.abs(det) < 0.00001) return null;
+    const dX = m.x - c3;
+    const dY = m.y - c6;
+    const x = (c5 * dX - c2 * dY) / det;
+    const y = (-c4 * dX + c1 * dY) / det;
+    return { x, y };
+  } else {
+    // similarity fallback
+    const { a, b, cx, cy } = state.transform;
+    const dX = m.x - cx;
+    const dY = m.y - cy;
+    const det = a * a + b * b;
+    if (det === 0) return null;
+    const x = (a * dX + b * dY) / det;
+    const y = (-b * dX + a * dY) / det;
+    return { x, y };
+  }
 }
 
 // --- Leaflet Canvas Photo Overlay ---
@@ -1628,7 +1652,7 @@ function initAiAssistant() {
     }
   });
   
-  el.btnAiAnalyze.addEventListener('click', runAiLocationAnalysis);
+  el.btnAiAnalyze.addEventListener('click', runAiGeoreference);
 }
 
 function updateAiButtonState() {
@@ -1645,7 +1669,7 @@ function updateAiButtonState() {
   }
 }
 
-function runAiLocationAnalysis() {
+function runAiGeoreference() {
   const apiKey = el.inputApiKey.value.trim();
   if (!apiKey || !state.image) return;
   
@@ -1653,8 +1677,8 @@ function runAiLocationAnalysis() {
   el.aiStatus.style.display = 'block';
   el.aiStatus.textContent = 'Kaart analyseren met AI...';
   
-  // Resize image to maximum 800px width/height on a temporary canvas
-  const maxDim = 800;
+  // Resize image to maximum 1024px width/height on a temporary canvas
+  const maxDim = 1024;
   let w = state.imageWidth;
   let h = state.imageHeight;
   if (w > maxDim || h > maxDim) {
@@ -1676,7 +1700,6 @@ function runAiLocationAnalysis() {
   const dataUrl = tempCanvas.toDataURL('image/jpeg', 0.85);
   const base64Data = dataUrl.split(',')[1];
   
-  // Call Gemini Developer API (gemini-2.5-flash is standard)
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
   
   const requestBody = {
@@ -1684,12 +1707,19 @@ function runAiLocationAnalysis() {
       {
         parts: [
           {
-            text: "Dit is een foto van een wandel- of fietsroutekaart. Analyseer de tekstlabels en geografische kenmerken om te herkennen waar deze kaart zich bevindt. Geef antwoord in een strikt JSON-formaat met de volgende sleutels:\n" +
-                  "- 'locationName': de naam van het gebied of de stad (bijv. 'Veluwezoom' of 'Schoorlse Duinen').\n" +
-                  "- 'latitude': de geschatte geografische breedtegraad van het centrum van de kaart (getal).\n" +
-                  "- 'longitude': de geschatte geografische lengtegraad van het centrum van de kaart (getal).\n" +
-                  "- 'description': een hele korte beschrijving van wat je herkent (max 15 woorden).\n" +
-                  "Geef GEEN markdown omhulsel, alleen de pure JSON string."
+            text: "Analyseer deze wandel- of fietsroutekaart foto. Identificeer 3 prominente, unieke herkenningspunten (zoals kruisingen van wegen, specifieke gebouwen, parkeerplaatsen of torens) die op zowel deze kaart als een standaard wegenkaart (OpenStreetMap) te vinden zijn. Geef antwoord in een strikt JSON-formaat met de volgende structuur:\n" +
+                  "{\n" +
+                  "  \"locationName\": \"naam van het wandelgebied of de plaats\",\n" +
+                  "  \"landmarks\": [\n" +
+                  "    {\n" +
+                  "      \"name\": \"beschrijvende naam van het punt (bijv. Kruising Bosweg en Duinweg, Schoorl)\",\n" +
+                  "      \"x\": 0.45,  // relatieve x-positie op de afbeelding als float tussen 0.0 (links) en 1.0 (rechts)\n" +
+                  "      \"y\": 0.62,  // relatieve y-positie op de afbeelding als float tussen 0.0 (boven) en 1.0 (onder)\n" +
+                  "      \"query\": \"zoekterm voor Nominatim geocoding (bijv. Kruising Duinweg Schoorlse Zeeweg, Schoorl)\"\n" +
+                  "    }\n" +
+                  "  ]\n" +
+                  "}\n" +
+                  "Geef GEEN markdown omhulsel (geen ```json), alleen de pure JSON string."
           },
           {
             inlineData: {
@@ -1713,15 +1743,11 @@ function runAiLocationAnalysis() {
     body: JSON.stringify(requestBody)
   })
   .then(res => {
-    if (!res.ok) {
-      if (res.status === 400) throw new Error('Ongeldige API sleutel.');
-      throw new Error('Netwerkfout bij AI.');
-    }
+    if (!res.ok) throw new Error('Ongeldige API sleutel of netwerkfout.');
     return res.json();
   })
   .then(data => {
-    el.aiStatus.style.display = 'none';
-    updateAiButtonState();
+    el.aiStatus.textContent = 'Herkenningspunten lokaliseren...';
     
     if (!data.candidates || data.candidates.length === 0) {
       throw new Error('Geen antwoord van AI.');
@@ -1730,28 +1756,143 @@ function runAiLocationAnalysis() {
     const textResponse = data.candidates[0].content.parts[0].text;
     const result = JSON.parse(textResponse.trim());
     
-    if (result.latitude && result.longitude) {
-      const lat = parseFloat(result.latitude);
-      const lng = parseFloat(result.longitude);
-      
-      map.setView([lat, lng], 14);
-      
-      const desc = result.description ? ` (${result.description})` : '';
-      showToast(`AI Locatie Herkend: ${result.locationName}${desc}`);
-      
-      if (result.locationName) {
-        el.inputSearchLocation.value = result.locationName;
-      }
-    } else {
-      throw new Error('Geen coördinaten in AI antwoord.');
+    if (!result.landmarks || result.landmarks.length < 2) {
+      throw new Error('Niet genoeg herkenningspunten gevonden door AI.');
     }
+    
+    // Geocode landmarks in parallel
+    const geocodePromises = result.landmarks.map((lm, idx) => {
+      // Wait 300ms between calls to avoid Nominatim rate limits
+      return new Promise(resolve => setTimeout(resolve, idx * 300))
+        .then(() => fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(lm.query)}&limit=1`))
+        .then(res => res.json())
+        .then(json => {
+          if (json && json.length > 0) {
+            return {
+              photo: { x: lm.x * state.imageWidth, y: lm.y * state.imageHeight },
+              map: L.latLng(parseFloat(json[0].lat), parseFloat(json[0].lon)),
+              name: lm.name
+            };
+          }
+          return null;
+        })
+        .catch(err => {
+          console.warn('Geocoding mislukt voor:', lm.name, err);
+          return null;
+        });
+    });
+    
+    return Promise.all(geocodePromises).then(matchedPoints => {
+      const validPoints = matchedPoints.filter(p => p !== null);
+      
+      if (validPoints.length < 2) {
+        throw new Error('Kon herkenningspunten niet geolokaliseren via Nominatim.');
+      }
+      
+      // Clear previous calibrations
+      clearCalibration();
+      
+      const zoom = 18;
+      
+      if (validPoints.length >= 3) {
+        // Do 3-point Affine Transform!
+        const p1 = validPoints[0].photo;
+        const p2 = validPoints[1].photo;
+        const p3 = validPoints[2].photo;
+        
+        const m1 = map.project(validPoints[0].map, zoom);
+        const m2 = map.project(validPoints[1].map, zoom);
+        const m3 = map.project(validPoints[2].map, zoom);
+        
+        const D = p1.x * (p2.y - p3.y) - p1.y * (p2.x - p3.x) + (p2.x * p3.y - p3.x * p2.y);
+        
+        if (Math.abs(D) < 0.0001) {
+          // Fallback to 2-point similarity
+          calculateSimilarityFallback(validPoints[0], validPoints[1]);
+          return;
+        }
+        
+        const c1 = (m1.x * (p2.y - p3.y) - p1.y * (m2.x - m3.x) + (m2.x * p3.y - m3.x * p2.y)) / D;
+        const c2 = (p1.x * (m2.x - m3.x) - m1.x * (p2.x - p3.x) + (p2.x * m3.x - p3.x * m2.x)) / D;
+        const c3 = (p1.x * (p2.y * m3.x - p3.y * m2.x) - p1.y * (p2.x * m3.x - p3.x * m2.x) + m1.x * (p2.x * p3.y - p3.x * p2.y)) / D;
+        
+        const c4 = (m1.y * (p2.y - p3.y) - p1.y * (m2.y - m3.y) + (m2.y * p3.y - m3.y * p2.y)) / D;
+        const c5 = (p1.x * (m2.y - m3.y) - m1.y * (p2.x - p3.x) + (p2.x * m3.y - p3.x * m2.y)) / D;
+        const c6 = (p1.x * (p2.y * m3.y - p3.y * m2.y) - p1.y * (p2.x * m3.y - p3.x * m2.y) + m1.y * (p2.x * p3.y - p3.x * p2.y)) / D;
+        
+        state.transform = { type: 'affine', c1, c2, c3, c4, c5, c6, zoom };
+        state.isCalibrated = true;
+        
+        // Show markers for landmarks in app
+        validPoints.forEach((vp, index) => {
+          state.calibrationPoints[index] = { photo: vp.photo, map: vp.map, marker: null };
+          addCalMapMarker(index, vp.map);
+        });
+        
+        showToast('Magische 3-punts kalibratie voltooid!');
+      } else {
+        // Fallback to 2-point Similarity Transform
+        calculateSimilarityFallback(validPoints[0], validPoints[1]);
+      }
+      
+      // Update UI
+      el.statusCalibration.textContent = 'Gekalibreerd (AI)';
+      el.statusCalibration.className = 'badge badge-success';
+      el.btnCalClear.classList.remove('hidden');
+      el.opacityControl.classList.remove('hidden');
+      el.btnToggleOverlay.classList.remove('hidden');
+      
+      addPhotoOverlay();
+      
+      // Center map
+      const centerLatLng = photoToLatLng(state.imageWidth / 2, state.imageHeight / 2);
+      map.setView(centerLatLng, 15);
+      
+      setCalibrationStep(0);
+      drawPhotoCanvas();
+    });
   })
   .catch(err => {
     console.error(err);
+    showToast(`AI Uitlijning Fout: ${err.message}`, 'error');
+  })
+  .finally(() => {
     el.aiStatus.style.display = 'none';
     updateAiButtonState();
-    showToast(`AI Fout: ${err.message}`, 'error');
   });
+}
+
+function calculateSimilarityFallback(vp1, vp2) {
+  const p1 = vp1.photo;
+  const p2 = vp2.photo;
+  const zoom = 18;
+  const m1 = map.project(vp1.map, zoom);
+  const m2 = map.project(vp2.map, zoom);
+  
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  const dX = m2.x - m1.x;
+  const dY = m2.y - m1.y;
+  
+  const denom = dx * dx + dy * dy;
+  if (denom === 0) return;
+  
+  const a = (dX * dx + dY * dy) / denom;
+  const b = (dY * dx - dX * dy) / denom;
+  
+  const cx = m1.x - a * p1.x + b * p1.y;
+  const cy = m1.y - b * p1.x - a * p1.y;
+  
+  state.transform = { type: 'similarity', a, b, cx, cy, zoom };
+  state.isCalibrated = true;
+  
+  // Show markers
+  state.calibrationPoints[0] = { photo: p1, map: vp1.map, marker: null };
+  addCalMapMarker(0, vp1.map);
+  state.calibrationPoints[1] = { photo: p2, map: vp2.map, marker: null };
+  addCalMapMarker(1, vp2.map);
+  
+  showToast('AI kalibratie voltooid (2-punts fall-back)!');
 }
 
 // --- Color Palette Presets & Auto-Tracing ---
@@ -1843,5 +1984,120 @@ function autoTraceColorPreset(targetR, targetG, targetB) {
     }
   } else {
     showToast('Tik op de routelijn op de foto om de kleur te bepalen.');
+  }
+}
+
+// --- RGB to HSL and Multi-Route Color Detection ---
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+  
+  if (max === min) {
+    h = s = 0;
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return { h: h * 360, s: s * 100, l: l * 100 };
+}
+
+function detectRoutes() {
+  if (!state.image || !offscreenCtx) return;
+  
+  const w = state.imageWidth;
+  const h = state.imageHeight;
+  const data = offscreenCtx.getImageData(0, 0, w, h).data;
+  
+  const bins = {
+    red: { count: 0, sumR: 0, sumG: 0, sumB: 0, color: '#dc2626', name: 'Rode Route', emoji: '🔴' },
+    orange: { count: 0, sumR: 0, sumG: 0, sumB: 0, color: '#ea580c', name: 'Oranje Route', emoji: '🟠' },
+    yellow: { count: 0, sumR: 0, sumG: 0, sumB: 0, color: '#eab308', name: 'Gele Route', emoji: '🟡' },
+    green: { count: 0, sumR: 0, sumG: 0, sumB: 0, color: '#16a34a', name: 'Groene Route', emoji: '🟢' },
+    blue: { count: 0, sumR: 0, sumG: 0, sumB: 0, color: '#2563eb', name: 'Blauwe Route', emoji: '🔵' },
+    purple: { count: 0, sumR: 0, sumG: 0, sumB: 0, color: '#9333ea', name: 'Paarse Route', emoji: '🟣' }
+  };
+  
+  const step = 8;
+  for (let y = 0; y < h; y += step) {
+    for (let x = 0; x < w; x += step) {
+      const idx = (y * w + x) * 4;
+      const r = data[idx];
+      const g = data[idx+1];
+      const b = data[idx+2];
+      
+      const hsl = rgbToHsl(r, g, b);
+      
+      if (hsl.s > 45 && hsl.l > 20 && hsl.l < 80) {
+        let binKey = null;
+        const hue = hsl.h;
+        
+        if (hue >= 340 || hue < 15) binKey = 'red';
+        else if (hue >= 15 && hue < 45) binKey = 'orange';
+        else if (hue >= 45 && hue < 70) binKey = 'yellow';
+        else if (hue >= 70 && hue < 155) binKey = 'green';
+        else if (hue >= 155 && hue < 255) binKey = 'blue';
+        else if (hue >= 255 && hue < 320) binKey = 'purple';
+        
+        if (binKey) {
+          bins[binKey].count++;
+          bins[binKey].sumR += r;
+          bins[binKey].sumG += g;
+          bins[binKey].sumB += b;
+        }
+      }
+    }
+  }
+  
+  const container = document.getElementById('ai-detected-routes-container');
+  const listEl = document.getElementById('ai-detected-routes');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+  
+  let detectedCount = 0;
+  const totalScanned = (w / step) * (h / step);
+  const threshold = totalScanned * 0.005; // 0.5%
+  
+  Object.keys(bins).forEach(key => {
+    const bin = bins[key];
+    if (bin.count > threshold) {
+      detectedCount++;
+      const avgR = Math.round(bin.sumR / bin.count);
+      const avgG = Math.round(bin.sumG / bin.count);
+      const avgB = Math.round(bin.sumB / bin.count);
+      
+      const btn = document.createElement('button');
+      btn.className = 'color-preset-btn';
+      btn.style.backgroundColor = `rgb(${avgR}, ${avgG}, ${avgB})`;
+      btn.title = `Extracteer ${bin.name}`;
+      btn.innerHTML = `<span style="font-size:0.65rem; pointer-events:none;">${bin.emoji}</span>`;
+      
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.color-preset-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        state.colorTarget = { r: avgR, g: avgG, b: avgB };
+        if (el.colorPreview) el.colorPreview.style.backgroundColor = `rgb(${avgR}, ${avgG}, ${avgB})`;
+        if (el.colorRgb) el.colorRgb.textContent = `RGB(${avgR}, ${avgG}, ${avgB})`;
+        
+        if (state.isCalibrated) {
+          autoTraceColorPreset(avgR, avgG, avgB);
+        }
+      });
+      listEl.appendChild(btn);
+    }
+  });
+  
+  if (detectedCount > 0 && container) {
+    container.classList.remove('hidden');
+    showToast(`AI: ${detectedCount} routekleuren gedetecteerd op de kaart!`);
+  } else if (container) {
+    container.classList.add('hidden');
   }
 }
