@@ -1727,7 +1727,7 @@ function runAiGeoreference() {
   const dataUrl = tempCanvas.toDataURL('image/jpeg', 0.85);
   const base64Data = dataUrl.split(',')[1];
   
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
   
   const requestBody = {
     contents: [
