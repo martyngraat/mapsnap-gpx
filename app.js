@@ -1744,8 +1744,17 @@ function runAiGeoreference() {
     },
     body: JSON.stringify(requestBody)
   })
-  .then(res => {
-    if (!res.ok) throw new Error('Ongeldige API sleutel of netwerkfout.');
+  .then(async res => {
+    if (!res.ok) {
+      let errMsg = `HTTP ${res.status}`;
+      try {
+        const errJson = await res.json();
+        if (errJson && errJson.error && errJson.error.message) {
+          errMsg = errJson.error.message;
+        }
+      } catch (e) {}
+      throw new Error(errMsg);
+    }
     return res.json();
   })
   .then(data => {
