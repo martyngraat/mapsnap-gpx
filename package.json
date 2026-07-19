@@ -1,0 +1,9 @@
+{
+  "name": "mapsnap-gpx",
+  "version": "1.0.0",
+  "description": "MapSnap GPX - Routekaart Foto naar GPX PWA",
+  "scripts": {
+    "start": "npx http-server -p 8080",
+    "deploy": "npx firebase-tools login && npx firebase-tools deploy --only hosting"
+  }
+}
