@@ -242,6 +242,31 @@ document.addEventListener('DOMContentLoaded', () => {
   initAiAssistant();
   initColorPalette();
   
+  const btnForceUpdate = document.getElementById('btn-force-update');
+  if (btnForceUpdate) {
+    btnForceUpdate.addEventListener('click', () => {
+      if (confirm('Wil je de app updaten en alle tijdelijke bestanden leegmaken?')) {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(registrations => {
+            for (let registration of registrations) {
+              registration.unregister();
+            }
+          });
+        }
+        if ('caches' in window) {
+          caches.keys().then(names => {
+            for (let name of names) {
+              caches.delete(name);
+            }
+          });
+        }
+        setTimeout(() => {
+          window.location.reload(true);
+        }, 500);
+      }
+    });
+  }
+  
   // Show guide on first launch
   if (!localStorage.getItem('mapsnap_guide_seen')) {
     el.guideDialog.showModal();

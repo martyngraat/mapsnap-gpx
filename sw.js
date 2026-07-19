@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mapsnap-v8';
+const CACHE_NAME = 'mapsnap-v9';
 const ASSETS = [
   './',
   './index.html',
