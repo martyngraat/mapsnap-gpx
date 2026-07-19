@@ -1650,9 +1650,11 @@ function initAiAssistant() {
     } else {
       localStorage.setItem('mapsnap_gemini_key', key);
     }
+    updateAiButtonState();
   });
   
   el.btnAiAnalyze.addEventListener('click', runAiGeoreference);
+  updateAiButtonState();
 }
 
 function updateAiButtonState() {
