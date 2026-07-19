@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mapsnap-v6';
+const CACHE_NAME = 'mapsnap-v7';
 const ASSETS = [
   './',
   './index.html',
@@ -15,6 +15,7 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (e) => {
+  self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS);
@@ -32,17 +33,31 @@ self.addEventListener('activate', (e) => {
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', (e) => {
+  const isLocal = e.request.url.startsWith(self.location.origin) || 
+                  e.request.url.includes('unpkg.com') || 
+                  e.request.url.includes('fonts.googleapis.com');
+                  
+  if (!isLocal) {
+    return;
+  }
+  
   e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(e.request);
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.match(e.request).then((cachedResponse) => {
+        const fetchedResponse = fetch(e.request).then((networkResponse) => {
+          if (networkResponse.status === 200) {
+            cache.put(e.request, networkResponse.clone());
+          }
+          return networkResponse;
+        }).catch(() => null);
+        
+        return cachedResponse || fetchedResponse;
+      });
     })
   );
 });
