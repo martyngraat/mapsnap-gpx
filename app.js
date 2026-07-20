@@ -348,6 +348,30 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('geoforge_guide_seen', 'true');
     el.guideDialog.close();
   });
+
+  if (el.btnForceUpdate) {
+    el.btnForceUpdate.addEventListener('click', () => {
+      if (confirm('Wil je de app forceer updaten en de cache leegmaken?')) {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(registrations => {
+            for (let registration of registrations) {
+              registration.unregister();
+            }
+          });
+        }
+        if ('caches' in window) {
+          caches.keys().then(names => {
+            for (let name of names) {
+              caches.delete(name);
+            }
+          });
+        }
+        setTimeout(() => {
+          window.location.reload(true);
+        }, 500);
+      }
+    });
+  }
 });
 
 // Toast notification
