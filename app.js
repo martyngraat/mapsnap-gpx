@@ -170,6 +170,7 @@ const el = {
   savedWaypointsList: document.getElementById('saved-waypoints-list'),
   
   // Dialogs
+  btnQuickSearch: document.getElementById('btn-quick-search'),
   locationDialog: document.getElementById('location-dialog'),
   inputSearchLocation: document.getElementById('input-search-location'),
   btnSearchLocation: document.getElementById('btn-search-location'),
@@ -193,6 +194,7 @@ const el = {
   btnShareLocation: document.getElementById('btn-share-location'),
 
   // Dialogs
+  btnQuickSettings: document.getElementById('btn-quick-settings'),
   settingsDialog: document.getElementById('settings-dialog'),
   inputGeminiKey: document.getElementById('input-gemini-key'),
   inputOrsKey: document.getElementById('input-ors-key'),

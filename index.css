@@ -324,7 +324,7 @@ body.dark-theme {
   color: #ffb3c6;
 }
 
-#recording-banner.hidden {
+.hidden {
   display: none !important;
 }
 
