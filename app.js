@@ -164,6 +164,7 @@ const el = {
   
   // POIs Panel
   btnPoiScan: document.getElementById('btn-poi-scan'),
+  btnPoiRefresh: document.getElementById('btn-poi-refresh'),
   poiStatusLog: document.getElementById('poi-status-log'),
   btnAddWaypoint: document.getElementById('btn-add-waypoint'),
   savedWaypointsList: document.getElementById('saved-waypoints-list'),
