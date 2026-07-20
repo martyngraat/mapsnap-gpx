@@ -1,4 +1,4 @@
-const CACHE_NAME = 'geoforge-v13';
+const CACHE_NAME = 'geoforge-v14';
 const ASSETS = [
   './',
   './index.html',
