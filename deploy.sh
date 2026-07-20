@@ -1,4 +1,5 @@
 #!/bin/bash
-echo "🚀 MapSnap GPX publiceren naar permanente Firebase Cloud Hosting..."
-npx firebase-tools login
-npx firebase-tools deploy --only hosting
+echo "🚀 GeoForge Navigator publiceren naar GitHub Pages..."
+git add .
+git commit -m "Deploy update via deploy.sh"
+npx gh-pages -d .
