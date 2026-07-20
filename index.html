@@ -7,19 +7,26 @@
     (function() {
       const p = new URLSearchParams(window.location.search);
       if (p.get('update') === 'true' || p.get('clear_cache') === 'true') {
+        const promises = [];
         if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(regs => {
-            for (let r of regs) r.unregister();
-          });
+          promises.push(
+            navigator.serviceWorker.getRegistrations().then(regs => {
+              return Promise.all(regs.map(r => r.unregister()));
+            })
+          );
         }
         if ('caches' in window) {
-          caches.keys().then(names => {
-            for (let n of names) caches.delete(n);
-          });
+          promises.push(
+            caches.keys().then(names => {
+              return Promise.all(names.map(n => caches.delete(n)));
+            })
+          );
         }
-        setTimeout(() => {
+        Promise.all(promises).then(() => {
           window.location.replace(window.location.origin + window.location.pathname);
-        }, 500);
+        }).catch(() => {
+          window.location.replace(window.location.origin + window.location.pathname);
+        });
       }
     })();
   </script>
