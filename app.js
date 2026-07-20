@@ -9,7 +9,7 @@ if ('serviceWorker' in navigator) {
 
 // --- App State ---
 const state = {
-  activeMode: 'nav', // nav, plan, measure, overlays, layers, poi
+  activeMode: 'nav', // nav, planner, measure, overlays, layers, poi
   
   // Geolocation & Telemetry
   userLocation: null,
@@ -785,7 +785,7 @@ function setupRoutePlanner() {
 }
 
 function onMapClick(e) {
-  if (state.activeMode === 'plan') {
+  if (state.activeMode === 'planner') {
     addPlannerPoint(e.latlng);
   } else if (state.activeMode === 'measure') {
     addMeasurePoint(e.latlng);
