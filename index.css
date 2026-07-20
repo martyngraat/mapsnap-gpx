@@ -301,10 +301,6 @@ body.dark-theme {
   color: var(--color-cyan);
 }
 
-.ctrl-fab.hidden {
-  display: none !important;
-}
-
 /* --- RECORDING FLOATING BANNER --- */
 #recording-banner {
   position: absolute;
@@ -348,7 +344,7 @@ body.dark-theme {
 #bottom-drawer {
   position: absolute;
   left: 0;
-  bottom: 56px; /* Sits exactly above bottom nav */
+  bottom: 56px;
   width: 100%;
   height: 52vh;
   background: var(--bg-dark-800);
@@ -481,7 +477,7 @@ body.dark-theme {
 .nav-tab-btn.active {
   color: var(--color-cyan);
   border-top: 2px solid var(--color-cyan);
-  padding-top: -2px; /* balance border height */
+  padding-top: -2px;
 }
 
 .nav-tab-btn.active svg {
@@ -490,7 +486,6 @@ body.dark-theme {
 
 /* --- PANEL COMPONENTS & FORMS --- */
 
-/* Recording Stats layout */
 .recording-stats-container {
   display: flex;
   flex-direction: column;
@@ -612,7 +607,6 @@ body.dark-theme {
   gap: 10px;
 }
 
-/* Drawer sections */
 .drawer-section {
   border-top: 1px solid var(--border-color);
   margin-top: 15px;
@@ -628,26 +622,7 @@ body.dark-theme {
   margin-bottom: 10px;
 }
 
-/* Input Fields */
-.text-input {
-  width: 100%;
-  background: var(--bg-dark-900);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-  padding: 10px 12px;
-  border-radius: var(--border-radius-sm);
-  font-family: var(--font-main);
-  font-size: 0.85rem;
-  outline: none;
-  transition: var(--transition-fast);
-}
-
-.text-input:focus {
-  border-color: var(--color-cyan);
-  box-shadow: 0 0 6px rgba(0, 243, 255, 0.2);
-}
-
-/* Selection list / dropdowns */
+/* Selection dropdowns */
 .select-control {
   display: flex;
   flex-direction: column;
@@ -718,7 +693,7 @@ body.dark-theme {
   transform: scale(1.15);
 }
 
-/* Toggle switch (Checkbox slider) */
+/* Toggle switch */
 .toggle-control {
   display: flex;
   align-items: center;
@@ -787,7 +762,7 @@ input:checked + .slider:before {
   gap: 12px;
 }
 
-/* --- HISTORICAL KAART: TOPOTIJDREIS SECTION --- */
+/* --- HISTORICAL KAART: TOPOTIJDREIS --- */
 .slider-wrapper {
   margin-top: 15px;
 }
@@ -906,7 +881,6 @@ input:checked + .slider:before {
   border-radius: 2px;
 }
 
-/* List Item styles */
 .saved-track-item,
 .saved-waypoint-item,
 .segment-item {
@@ -962,7 +936,6 @@ input:checked + .slider:before {
   color: var(--color-red);
 }
 
-/* Segment items */
 .segment-item {
   font-family: var(--font-mono);
   font-size: 0.75rem;
@@ -1014,130 +987,6 @@ input:checked + .slider:before {
   border-color: var(--color-cyan);
   background: rgba(0, 243, 255, 0.05);
   color: var(--text-primary);
-}
-
-/* --- PHOTO SNAP / CALIBRATION VIEWER (Original MapSnap) --- */
-.viewer-container {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.canvas-wrapper {
-  position: relative;
-  width: 100%;
-  height: 200px;
-  background-color: #050608;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  overflow: hidden;
-}
-
-#photo-canvas {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.canvas-overlay-text {
-  position: absolute;
-  bottom: 8px;
-  left: 8px;
-  right: 8px;
-  background: rgba(0, 0, 0, 0.75);
-  padding: 4px 8px;
-  border-radius: 3px;
-  font-size: 0.7rem;
-  color: var(--color-cyan);
-  text-align: center;
-}
-
-.canvas-controls-row {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-
-.ctrl-btn-small {
-  background: var(--bg-dark-700);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-  padding: 6px 12px;
-  border-radius: var(--border-radius-sm);
-  cursor: pointer;
-  font-size: 0.75rem;
-  font-weight: bold;
-}
-
-.ctrl-btn-small:hover {
-  background: var(--bg-dark-600);
-  border-color: var(--color-cyan);
-  color: var(--color-cyan);
-}
-
-/* Upload dropzone */
-.upload-dropzone {
-  border: 2px dashed var(--border-color);
-  padding: 20px;
-  border-radius: var(--border-radius-sm);
-  text-align: center;
-  background-color: rgba(255, 255, 255, 0.01);
-  transition: var(--transition-fast);
-  margin-bottom: 12px;
-}
-
-.upload-dropzone h3 {
-  font-size: 0.85rem;
-  margin-bottom: 4px;
-}
-
-.upload-dropzone p {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  margin-bottom: 12px;
-}
-
-.upload-buttons-row {
-  display: flex;
-  gap: 8px;
-}
-
-.color-presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.color-preset-btn {
-  width: 20px;
-  height: 20px;
-  border-radius: 3px;
-  border: none;
-  cursor: pointer;
-}
-
-.color-preset-btn.active {
-  box-shadow: 0 0 0 2px var(--color-cyan);
-}
-
-.color-picker-label {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-  font-size: 0.8rem;
-}
-
-.color-picker-label input {
-  display: none;
-}
-
-.original-capsule {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 
 /* --- DIALOGS (Modals) --- */
@@ -1226,7 +1075,7 @@ input:checked + .slider:before {
   color: var(--color-cyan);
 }
 
-/* Guide Steps inside Dialog */
+/* Guide Steps */
 .guide-steps {
   list-style: none;
   display: flex;
@@ -1317,26 +1166,9 @@ input:checked + .slider:before {
   }
 }
 
-.bounce-animation {
-  animation: bounce 2s infinite;
-}
-
-@keyframes bounce {
-  0%, 20%, 50%, 80%, 100% {
-    transform: translateY(0);
-  }
-  40% {
-    transform: translateY(-5px);
-  }
-  60% {
-    transform: translateY(-3px);
-  }
-}
-
 /* --- RESPONSIVE DESKTOP ADAPTATION --- */
 @media (min-width: 768px) {
   
-  /* Sidebar on the Left instead of Bottom drawer */
   #bottom-drawer {
     left: 10px;
     top: 90px;
@@ -1346,18 +1178,17 @@ input:checked + .slider:before {
     border-radius: var(--border-radius-md);
     border: 1px solid var(--border-color);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    transform: none; /* Ignore translation */
+    transform: none;
   }
   
   #bottom-drawer.drawer-closed {
-    transform: translateX(-420px); /* Slide out left */
+    transform: translateX(-420px);
   }
   
   .drawer-header {
     border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
   }
   
-  /* Shift leaflet default controls to the right if sidebar is open */
   .leaflet-left {
     left: 400px !important;
     transition: var(--transition-normal);
@@ -1367,7 +1198,6 @@ input:checked + .slider:before {
     left: 10px !important;
   }
   
-  /* Adjust Bottom nav for desktop */
   #bottom-navigation {
     top: 90px;
     right: 10px;
@@ -1400,10 +1230,9 @@ input:checked + .slider:before {
     padding-left: -2px;
   }
   
-  /* Floating map controls adjustments (moved down to not overlap bottom navigation on desktop) */
   #map-controls-group {
     right: 10px;
-    top: 450px;
+    top: 480px;
   }
   
   #toast-container {
@@ -1413,7 +1242,6 @@ input:checked + .slider:before {
     transform: none;
   }
   
-  /* Max height of listing containers can expand on desktop */
   .tracks-list,
   .waypoints-list,
   .segments-list {
