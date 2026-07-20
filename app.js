@@ -537,7 +537,9 @@ function initMap() {
 document.addEventListener('DOMContentLoaded', () => {
   try {
     initMap();
+    alert("Diagnostic Check 1: Map initialized successfully!");
     setupDrawerController();
+    alert("Diagnostic Check 2: Drawer controller initialized! Detected nav buttons: " + el.navButtons.length);
     setupCollapsibleInfo();
     setupGeolocation();
     setupRecordingSystem();
@@ -619,6 +621,7 @@ function setupDrawerController() {
   el.navButtons.forEach(btn => {
     btn.addEventListener('click', () => {
       const panelId = btn.getAttribute('data-panel');
+      alert("Diagnostic Check 3: Nav button clicked! data-panel=" + panelId);
       switchPanel(panelId);
     });
   });
