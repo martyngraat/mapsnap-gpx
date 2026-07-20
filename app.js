@@ -566,6 +566,10 @@ document.addEventListener('DOMContentLoaded', () => {
     el.guideDialog.close();
   });
 
+  if (el.btnCloseBeaconViewer) {
+    el.btnCloseBeaconViewer.addEventListener('click', stopViewingLiveBeacon);
+  }
+
   // Cache reset handler
   if (el.btnForceUpdate) {
     el.btnForceUpdate.addEventListener('click', () => {
@@ -3081,12 +3085,7 @@ function setupFirebaseBeaconReceiver() {
     dashArray: '5, 5'
   }).addTo(map);
 
-  if (el.btnCloseBeaconViewer && !el.btnCloseBeaconViewer.hasAttribute('data-bound')) {
-    el.btnCloseBeaconViewer.setAttribute('data-bound', 'true');
-    el.btnCloseBeaconViewer.addEventListener('click', () => {
-      stopViewingLiveBeacon();
-    });
-  }
+  // Close listener is now bound unconditionally on DOMContentLoaded
 
   showToast("Live positievolgen gestart...");
 
