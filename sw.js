@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mapsnap-v12';
+const CACHE_NAME = 'geoforge-v1';
 const ASSETS = [
   './',
   './index.html',

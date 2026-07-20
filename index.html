@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>MapSnap GPX - Routekaart Foto naar GPX</title>
-  <meta name="description" content="Zet gefotografeerde routekaarten om naar nauwkeurige GPX-bestanden die gesnapt zijn op echte paden.">
+  <title>GeoForge Navigator - Gaia GPS Benchmark</title>
+  <meta name="description" content="Superstrakke technische GPS app voor buitengebruik. Plannen via paden, meten met een latje, POIs en historische kaarten.">
   
   <!-- Web App Manifest -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#111827">
+  <meta name="theme-color" content="#0a0b0e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   
-  <!-- Google Fonts -->
+  <!-- Google Fonts: Outfit (modern sans) & JetBrains Mono (technical numeric) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
@@ -26,196 +26,132 @@
 </head>
 <body class="dark-theme">
 
-  <!-- Main Container -->
-  <div id="app-container">
+  <!-- Main Fullscreen Viewport -->
+  <div id="app-viewport">
     
-    <!-- Top Header -->
-    <header id="main-header">
-      <div class="logo-area">
-        <img src="icon.svg" alt="MapSnap Logo" class="header-logo" />
-        <div>
-          <h1>MapSnap <span class="gradient-text">GPX</span></h1>
-          <p class="subtitle">Foto-naar-GPX Navigator</p>
+    <!-- Leaflet Map (Fills background) -->
+    <div id="map"></div>
+
+    <!-- Technical HUD Telemetry Dashboard (Floating at top) -->
+    <header id="hud-dashboard">
+      <div class="hud-brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="glow-icon"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line></svg>
+        </div>
+        <div class="brand-text">
+          <h2>GEO<span class="highlight-cyan">FORGE</span></h2>
+          <span class="sys-status" id="gps-status"><span class="status-dot"></span>GPS STANDBY</span>
         </div>
       </div>
       
-      <!-- Calibration & System Status Badges -->
-      <div class="status-bar">
-        <div id="status-photo" class="badge badge-error">Geen foto</div>
-        <div id="status-calibration" class="badge badge-error">Niet gekalibreerd</div>
-        <button id="btn-guide" class="icon-button" title="Uitleg & Gids">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-        </button>
+      <!-- Telemetry numbers -->
+      <div class="hud-telemetry">
+        <div class="tel-item" title="Snelheid">
+          <span class="tel-label">SPD</span>
+          <span class="tel-value mono" id="hud-speed">0.0</span>
+          <span class="tel-unit">km/u</span>
+        </div>
+        <div class="tel-item" title="Hoogte">
+          <span class="tel-label">ALT</span>
+          <span class="tel-value mono" id="hud-elevation">---</span>
+          <span class="tel-unit">m</span>
+        </div>
+        <div class="tel-item" title="Kompasrichting">
+          <span class="tel-label">HDG</span>
+          <span class="tel-value mono" id="hud-bearing">---°</span>
+          <span class="tel-unit" id="hud-compass-dir">N</span>
+        </div>
+        <div class="tel-item" title="Nauwkeurigheid">
+          <span class="tel-label">ACC</span>
+          <span class="tel-value mono" id="hud-accuracy">---</span>
+          <span class="tel-unit">m</span>
+        </div>
       </div>
+
+      <!-- Quick Action: Search -->
+      <button id="btn-quick-search" class="hud-action-btn" title="Zoek Locatie">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      </button>
     </header>
 
-    <!-- Mobile Navigation Tabs (Shown on Mobile only) -->
-    <nav id="mobile-tabs" class="tabs-nav">
-      <button class="tab-btn active" data-tab="photo-section">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-        1. Foto
+    <!-- Floating Map Actions (Right side) -->
+    <div id="map-controls-group">
+      <button id="btn-locate" class="ctrl-fab" title="Mijn Locatie">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line></svg>
       </button>
-      <button class="tab-btn" data-tab="map-section">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line></svg>
-        2. Kaart
+      <button id="btn-poi-refresh" class="ctrl-fab" title="Scan POIs in dit gebied">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
       </button>
-      <button class="tab-btn" data-tab="control-panel">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
-        Instellingen
+      <button id="btn-toggle-overlay" class="ctrl-fab hidden" title="Toon/Verberg Gekalibreerde Foto">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
       </button>
-    </nav>
+    </div>
 
-    <!-- Main Workspace Layout -->
-    <main id="workspace">
-      
-      <!-- 1. Photo Section -->
-      <section id="photo-section" class="workspace-panel active">
-        <!-- Photo Upload Placeholder -->
-        <div id="upload-container" class="upload-dropzone">
-          <div class="upload-content">
-            <div class="upload-icon-container">
-              <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="bounce-animation"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+    <!-- Active Recording Indicator overlay -->
+    <div id="recording-banner" class="hidden">
+      <span class="rec-dot pulsing"></span>
+      <span class="rec-time mono" id="rec-duration-banner">00:00:00</span>
+      <span class="rec-dist mono" id="rec-distance-banner">0.00 km</span>
+    </div>
+
+    <!-- Slide-Up Bottom Drawer -->
+    <section id="bottom-drawer" class="drawer-closed">
+      <!-- Drawer Header / Handle -->
+      <div class="drawer-header" id="drawer-drag-bar">
+        <div class="drag-handle"></div>
+        <span class="drawer-title" id="active-panel-title">Dashboard</span>
+        <button id="btn-close-drawer" class="close-btn" title="Sluit paneel">&times;</button>
+      </div>
+
+      <!-- Drawer Content Panels -->
+      <div class="drawer-body">
+        
+        <!-- PANEL 1: Dashboard / Track Recording -->
+        <div id="panel-dashboard" class="drawer-panel active">
+          <div class="recording-stats-container">
+            <div class="stats-row">
+              <div class="stat-card">
+                <span class="card-label">Tijd Verstreken</span>
+                <span class="card-value mono" id="rec-time">00:00:00</span>
+              </div>
+              <div class="stat-card">
+                <span class="card-label">Afstand</span>
+                <span class="card-value mono" id="rec-distance">0.00 km</span>
+              </div>
+              <div class="stat-card">
+                <span class="card-label">Gem. Snelheid</span>
+                <span class="card-value mono" id="rec-avg-speed">0.0 km/u</span>
+              </div>
+              <div class="stat-card">
+                <span class="card-label">Hoogte Verschil</span>
+                <span class="card-value mono" id="rec-elevation">---</span>
+              </div>
             </div>
-            <h3>Foto van routekaart opladen</h3>
-            <p>Maak een foto of kies een bestand uit je bibliotheek</p>
-            <div class="upload-buttons">
-              <label for="camera-input" class="btn btn-primary">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                Camera
-              </label>
-              <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;" />
-              
-              <label for="file-input" class="btn btn-secondary">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                Bestand Kiezen
-              </label>
-              <input type="file" id="file-input" accept="image/*" style="display:none;" />
+            
+            <!-- REC Controls -->
+            <div class="recording-controls">
+              <button id="btn-rec-start" class="btn btn-primary btn-rec">
+                <span class="rec-dot"></span>Start Opname
+              </button>
+              <button id="btn-rec-pause" class="btn btn-secondary hidden">Pauzeer</button>
+              <button id="btn-rec-stop" class="btn btn-danger hidden">Stop & Sla Op</button>
+            </div>
+          </div>
+
+          <!-- Opgeslagen Tracks Lijst -->
+          <div class="drawer-section" style="margin-top:20px;">
+            <h3 class="section-title">Opgeslagen Tracks</h3>
+            <div id="saved-tracks-list" class="tracks-list">
+              <div class="no-data-text">Geen opgenomen tracks gevonden.</div>
             </div>
           </div>
         </div>
 
-        <!-- Interactive Photo Viewer -->
-        <div id="photo-viewer" class="viewer-container hidden">
-          <canvas id="photo-canvas"></canvas>
-          <div class="photo-controls">
-            <button id="btn-zoom-in" class="control-btn" title="Inzoomen">＋</button>
-            <button id="btn-zoom-out" class="control-btn" title="Uitzoomen">－</button>
-            <button id="btn-photo-reset" class="control-btn" title="Weergave resetten">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-            </button>
-            <span class="control-divider"></span>
-            <button id="btn-trace-undo" class="control-btn" title="Laatste stap ongedaan maken" disabled>
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
-            </button>
-            <button id="btn-trace-clear" class="control-btn text-danger" title="Hele route wissen">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            </button>
-          </div>
-          <div class="photo-info-overlay">
-            <span id="photo-mode-indicator">Kalibratie Modus: Klik op Punt 1</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- 2. Map Section -->
-      <section id="map-section" class="workspace-panel">
-        <div id="map"></div>
-        <div class="map-overlay-controls">
-          <button id="btn-locate" class="map-btn" title="Mijn Locatie">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line></svg>
-          </button>
-          <button id="btn-toggle-overlay" class="map-btn hidden" title="Toon/Verberg Foto-overlay">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-          </button>
-        </div>
-      </section>
-
-      <!-- 3. Sidebar / Control Panel -->
-      <section id="control-panel" class="workspace-panel">
-        <div class="panel-content">
+        <!-- PANEL 2: Route Planner (BRouter Snapping) -->
+        <div id="panel-planner" class="drawer-panel">
+          <p class="panel-desc">Teken een route op de kaart. Klik punten om deze automatisch te laten snappen op wegen en paden.</p>
           
-          <!-- Section 1: AI-Uitlijning -->
-          <div class="panel-group">
-            <h2 class="group-title">Stap 1: AI-Uitlijning</h2>
-            <p class="group-description">Voer je Gemini API-sleutel in en laat AI de routekaart automatisch uitlijnen op de echte kaart.</p>
-            
-            <div class="select-control">
-              <input type="text" id="input-api-key" placeholder="Voer Gemini API Sleutel in..." style="-webkit-text-security: disc; text-security: disc;" autocomplete="off" spellcheck="false" />
-            </div>
-            
-            <div class="toggle-control">
-              <label class="switch">
-                <input type="checkbox" id="chk-save-key" />
-                <span class="slider round"></span>
-              </label>
-              <span style="font-size: 0.8rem;">Sleutel onthouden in browser</span>
-            </div>
-
-            <button id="btn-ai-analyze" class="btn btn-primary btn-full" disabled>
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-              Lijn Kaart Automatisch Uit
-            </button>
-            
-            <div id="ai-status" class="help-text" style="display:none; text-align:center; font-weight:600; color: var(--color-primary);">
-              Analyseren...
-            </div>
-
-            <!-- Overlay Opacity Slider (Shown only when calibrated) -->
-            <div id="opacity-control" class="slider-control hidden">
-              <label for="slider-opacity">Kaart Overlay Transparantie: <span id="opacity-value">50%</span></label>
-              <input type="range" id="slider-opacity" min="0" max="100" value="50" />
-            </div>
-
-            <button id="btn-cal-clear" class="btn btn-secondary btn-full hidden">Reset AI-Uitlijning</button>
-          </div>
-
-          <!-- Section 2: Automatic Color Route Tracing -->
-          <div class="panel-group">
-            <h2 class="group-title">Stap 2: Routekleur & Auto-Traceren</h2>
-            <p class="group-description">Kies de kleur van de route op de foto of tik op de routelijn om deze automatisch te laten herkennen.</p>
-            
-            <!-- Quick Color Presets -->
-            <div class="color-presets">
-              <button class="color-preset-btn active" data-color="#dc2626" title="Rode Route" style="background-color: #dc2626;"></button>
-              <button class="color-preset-btn" data-color="#2563eb" title="Blauwe Route" style="background-color: #2563eb;"></button>
-              <button class="color-preset-btn" data-color="#16a34a" title="Groene Route" style="background-color: #16a34a;"></button>
-              <button class="color-preset-btn" data-color="#9333ea" title="Paarse Route" style="background-color: #9333ea;"></button>
-              <button class="color-preset-btn" data-color="#ea580c" title="Oranje Route" style="background-color: #ea580c;"></button>
-              <button class="color-preset-btn" data-color="#eab308" title="Gele Route" style="background-color: #eab308;"></button>
-              <button class="color-preset-btn" data-color="#18181b" title="Zwarte Route" style="background-color: #18181b; border: 1px solid white;"></button>
-              
-              <label class="color-picker-label" title="Aangepaste kleur kiezen">
-                <input type="color" id="input-color-picker" value="#dc2626" />
-                <span class="color-picker-icon">🎨</span>
-              </label>
-            </div>
-
-            <!-- AI Detected Routes (dynamic) -->
-            <div id="ai-detected-routes-container" class="hidden" style="margin-top: 4px; padding: 10px; background-color: rgba(0, 0, 0, 0.1); border-radius: var(--border-radius-sm); border: 1px solid var(--border-glass);">
-              <span style="font-size: 0.8rem; color: var(--color-primary); font-weight: 700;">🤖 Gedetecteerde Kaartroutes:</span>
-              <div id="ai-detected-routes" class="color-presets" style="margin-top: 6px;"></div>
-            </div>
-
-            <div class="color-sample-row">
-              <span>Actieve kleur:</span>
-              <div id="color-preview" class="color-preview-box" style="background-color: #dc2626;"></div>
-              <span id="color-rgb">RGB(220, 38, 38)</span>
-            </div>
-
-            <div class="slider-control">
-              <label for="slider-tolerance">Gevoeligheid (Tolerantie): <span id="tolerance-value">40</span></label>
-              <input type="range" id="slider-tolerance" min="15" max="100" value="40" />
-            </div>
-
-            <div class="help-text">
-              👉 Tik op de routelijn op de foto om de kleur exact te bepalen en de route direct automatisch te traceren!
-            </div>
-          </div>
-
-          <!-- Section 3: BRouter Snapping -->
-          <div class="panel-group">
-            <h2 class="group-title">Stap 3: Route Snapping (BRouter)</h2>
-            
+          <div class="panel-row">
             <div class="toggle-control">
               <label class="switch">
                 <input type="checkbox" id="chk-snap-brouter" checked />
@@ -223,96 +159,389 @@
               </label>
               <span>Vastmaken aan wegen en paden</span>
             </div>
+          </div>
 
-            <div class="select-control">
-              <label for="select-profile">Activiteit / Routering Profiel:</label>
-              <select id="select-profile">
-                <option value="trekking" selected>🚶 Wandelen (Trekking)</option>
-                <option value="hiking">🥾 Hiken (Moeilijker terrein)</option>
-                <option value="fastbike">🚲 Fietsen (Fastbike)</option>
-                <option value="mtb">🚵 Mountainbike</option>
-                <option value="straight">📏 Rechte lijn (Geen snapping)</option>
-              </select>
+          <div class="select-control">
+            <label for="select-profile">Activiteit:</label>
+            <select id="select-profile">
+              <option value="trekking" selected>🚶 Wandelen (Trekking)</option>
+              <option value="hiking">🥾 Hiken (Moeilijker terrein)</option>
+              <option value="fastbike">🚲 Fietsen (Snelle fiets)</option>
+              <option value="mtb">🚵 Mountainbike</option>
+              <option value="straight">📏 Rechte lijn (Geen snapping)</option>
+            </select>
+          </div>
+
+          <!-- Route Stats -->
+          <div class="route-stats">
+            <div class="stat-box">
+              <div class="stat-value mono" id="stat-distance">0.00 km</div>
+              <div class="stat-label">Afstand</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-value mono" id="stat-points">0</div>
+              <div class="stat-label">Punten</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-value mono" id="stat-est-time">0m</div>
+              <div class="stat-label">Geschatte Tijd</div>
             </div>
           </div>
 
-          <!-- Section 4: Export -->
-          <div class="panel-group">
-            <h2 class="group-title">Stap 4: Exporteren</h2>
-            
-            <div class="route-stats">
-              <div class="stat-box">
-                <div class="stat-value" id="stat-distance">0.0 km</div>
-                <div class="stat-label">Afstand</div>
+          <div class="control-buttons-row">
+            <button id="btn-plan-undo" class="btn btn-secondary btn-half" disabled>Stap Terug</button>
+            <button id="btn-plan-clear" class="btn btn-danger btn-half" disabled>Wis Alles</button>
+          </div>
+          
+          <button id="btn-export-gpx" class="btn btn-primary btn-full" disabled style="margin-top:10px;">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            Download Route GPX
+          </button>
+        </div>
+
+        <!-- PANEL 3: Meetlatje (Ruler over multiple points) -->
+        <div id="panel-measure" class="drawer-panel">
+          <p class="panel-desc">Meten met een latje over meerdere punten. Klik op de kaart om meetpunten te plaatsen en zie de segmentafstanden en kompasrichtingen.</p>
+          
+          <div class="route-stats">
+            <div class="stat-box" style="grid-column: span 3;">
+              <div class="stat-value mono text-cyan" id="measure-total-dist">0.00 km</div>
+              <div class="stat-label">Totale Meetlengte</div>
+            </div>
+          </div>
+
+          <div class="drawer-section">
+            <h3 class="section-title">Segmenten</h3>
+            <div id="measure-segments-list" class="segments-list">
+              <div class="no-data-text">Tik op de kaart om te beginnen met meten.</div>
+            </div>
+          </div>
+
+          <button id="btn-measure-clear" class="btn btn-danger btn-full" disabled style="margin-top:15px;">
+            Wis Meetpunten
+          </button>
+        </div>
+
+        <!-- PANEL 4: Kaartlagen & Historische Kaart -->
+        <div id="panel-layers" class="drawer-panel">
+          
+          <!-- Basemaps Selection -->
+          <div class="drawer-section">
+            <h3 class="section-title">Basiskaarten</h3>
+            <div class="basemap-grid">
+              <label class="basemap-option">
+                <input type="radio" name="basemap" value="opentopo" checked />
+                <span class="option-card">
+                  <span class="option-name">OpenTopoMap</span>
+                </span>
+              </label>
+              <label class="basemap-option">
+                <input type="radio" name="basemap" value="osm" />
+                <span class="option-card">
+                  <span class="option-name">OpenStreetMap</span>
+                </span>
+              </label>
+              <label class="basemap-option">
+                <input type="radio" name="basemap" value="satellite" />
+                <span class="option-card">
+                  <span class="option-name">Esri Satelliet</span>
+                </span>
+              </label>
+              <label class="basemap-option">
+                <input type="radio" name="basemap" value="dark" />
+                <span class="option-card">
+                  <span class="option-name">Technical Dark</span>
+                </span>
+              </label>
+              <label class="basemap-option">
+                <input type="radio" name="basemap" value="topotijdreis" />
+                <span class="option-card">
+                  <span class="option-name">Kadaster Historisch (NL)</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Topotijdreis Slider (Hidden by default, shown when topotijdreis base layer is active) -->
+          <div id="topotijdreis-control" class="drawer-section slider-section hidden">
+            <h3 class="section-title">Kadaster Topotijdreis Jaar: <span id="topotijdreis-year-val" class="text-cyan mono">1970</span></h3>
+            <p class="panel-desc" style="margin-bottom:10px;">Selecteer een historisch jaar (1815 - 2020) om de Nederlandse kaartontwikkeling te zien.</p>
+            <div class="slider-wrapper">
+              <input type="range" id="topotijdreis-year" min="1815" max="2020" value="1970" step="5" />
+              <div class="slider-ticks">
+                <span>1815</span>
+                <span>1870</span>
+                <span>1920</span>
+                <span>1970</span>
+                <span>2020</span>
               </div>
-              <div class="stat-box">
-                <div class="stat-value" id="stat-points">0</div>
-                <div class="stat-label">Routepunten</div>
+            </div>
+          </div>
+
+          <!-- Overlays -->
+          <div class="drawer-section">
+            <h3 class="section-title">Kaart Overlays</h3>
+            <div class="toggle-list">
+              <div class="toggle-control">
+                <label class="switch">
+                  <input type="checkbox" id="overlay-hiking" />
+                  <span class="slider round"></span>
+                </label>
+                <span>Hike Netwerk (Wandelpaden)</span>
+              </div>
+              <div class="toggle-control">
+                <label class="switch">
+                  <input type="checkbox" id="overlay-cycling" />
+                  <span class="slider round"></span>
+                </label>
+                <span>Cycling Netwerk (Fietspaden)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Photo Overlay Controls (Reused MapSnap) -->
+          <div id="photo-overlay-management" class="drawer-section hidden">
+            <h3 class="section-title">Gekalibreerde Foto-Overlay</h3>
+            <div class="slider-control" id="opacity-control">
+              <label for="slider-opacity">Transparantie: <span id="opacity-value" class="mono text-cyan">50%</span></label>
+              <input type="range" id="slider-opacity" min="0" max="100" value="50" />
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL 5: POI Explorer & Waypoints -->
+        <div id="panel-poi" class="drawer-panel">
+          <p class="panel-desc">Zoek live in de buurt naar handige punten (POI's) of voeg je eigen Waypoint toe.</p>
+          
+          <!-- POI Query Checkboxes -->
+          <div class="drawer-section">
+            <h3 class="section-title">Scan Punten in Gebied</h3>
+            <div class="poi-filters-grid">
+              <label class="poi-filter-checkbox">
+                <input type="checkbox" class="poi-cat-chk" value="drinking_water" checked />
+                <span class="chk-label">💧 Drinkwater</span>
+              </label>
+              <label class="poi-filter-checkbox">
+                <input type="checkbox" class="poi-cat-chk" value="camp_site" checked />
+                <span class="chk-label">⛺ Campings</span>
+              </label>
+              <label class="poi-filter-checkbox">
+                <input type="checkbox" class="poi-cat-chk" value="viewpoint" checked />
+                <span class="chk-label">🔭 Uitzichtpunten</span>
+              </label>
+              <label class="poi-filter-checkbox">
+                <input type="checkbox" class="poi-cat-chk" value="peak" />
+                <span class="chk-label">🏔️ Bergtoppen</span>
+              </label>
+              <label class="poi-filter-checkbox">
+                <input type="checkbox" class="poi-cat-chk" value="historic" />
+                <span class="chk-label">🏰 Historisch</span>
+              </label>
+              <label class="poi-filter-checkbox">
+                <input type="checkbox" class="poi-cat-chk" value="picnic_site" />
+                <span class="chk-label">🧺 Picknickplekken</span>
+              </label>
+            </div>
+            
+            <button id="btn-poi-scan" class="btn btn-secondary btn-full" style="margin-top:10px;">
+              🔍 Zoek POIs in Huidig Kaartbeeld
+            </button>
+            <div id="poi-status-log" class="help-text" style="display:none; text-align:center; color: var(--color-primary); font-weight: 500;">
+              Overpass API doorzoeken...
+            </div>
+          </div>
+
+          <!-- Add Waypoint -->
+          <div class="drawer-section">
+            <h3 class="section-title">Eigen Waypoints</h3>
+            <button id="btn-add-waypoint" class="btn btn-primary btn-full">
+              ➕ Voeg Waypoint Toe op Kaartcenter
+            </button>
+            
+            <div id="saved-waypoints-list" class="waypoints-list" style="margin-top:12px;">
+              <div class="no-data-text">Geen eigen waypoints aangemaakt.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL 6: Photo Overlay Calibration (Original MapSnap GPX) -->
+        <div id="panel-photosnap" class="drawer-panel">
+          <div class="original-capsule">
+            <!-- Step 1: Gemini API sleutel -->
+            <div class="drawer-section">
+              <h3 class="section-title">1. AI-Kalibratie Instellingen</h3>
+              <p class="panel-desc">Geef je Gemini API-sleutel op om foto's automatisch te laten uitlijnen op de echte kaart.</p>
+              
+              <input type="text" id="input-api-key" class="text-input" placeholder="Voer Gemini API Sleutel in..." style="-webkit-text-security: disc; text-security: disc;" autocomplete="off" spellcheck="false" />
+              
+              <div class="toggle-control" style="margin-top:8px;">
+                <label class="switch">
+                  <input type="checkbox" id="chk-save-key" />
+                  <span class="slider round"></span>
+                </label>
+                <span style="font-size: 0.8rem; color:var(--text-secondary);">Sleutel onthouden in browser</span>
               </div>
             </div>
 
-            <button id="btn-export-gpx" class="btn btn-primary btn-full" disabled>
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              Download GPX Bestand
-            </button>
-            
-            <div style="text-align: center; margin-top: 16px;">
-              <button id="btn-force-update" style="background: none; border: none; text-decoration: underline; color: var(--text-muted); font-size: 0.75rem; cursor: pointer;">
-                🔄 Forceer Update (Cache Leegmaken)
+            <!-- Upload dropzone -->
+            <div id="upload-container" class="upload-dropzone">
+              <div class="upload-content">
+                <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted); margin-bottom:8px;" class="bounce-animation"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                <h3>Routekaart importeren</h3>
+                <p>Maak een foto of kies een bestand van je apparaat</p>
+                
+                <div class="upload-buttons-row">
+                  <label for="camera-input" class="btn btn-primary btn-half">Camera
+                    <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;" />
+                  </label>
+                  <label for="file-input" class="btn btn-secondary btn-half">Bestand
+                    <input type="file" id="file-input" accept="image/*" style="display:none;" />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Photo Canvas Viewer -->
+            <div id="photo-viewer" class="viewer-container hidden">
+              <div class="canvas-wrapper">
+                <canvas id="photo-canvas"></canvas>
+                <div class="canvas-overlay-text" id="photo-mode-indicator">
+                  Klik op Punt 1 op de foto om te kalibreren.
+                </div>
+              </div>
+              
+              <div class="canvas-controls-row">
+                <button id="btn-zoom-in" class="ctrl-btn-small" title="Inzoomen">＋</button>
+                <button id="btn-zoom-out" class="ctrl-btn-small" title="Uitzoomen">－</button>
+                <button id="btn-photo-reset" class="ctrl-btn-small" title="Reset weergave">🔄</button>
+                <span style="flex:1;"></span>
+                <button id="btn-trace-undo" class="ctrl-btn-small btn-secondary" title="Stap terug" disabled>⏪</button>
+                <button id="btn-trace-clear" class="ctrl-btn-small btn-danger" title="Wis tracering">🗑️</button>
+              </div>
+
+              <!-- Align button -->
+              <button id="btn-ai-analyze" class="btn btn-primary btn-full" disabled style="margin-top:10px;">
+                🚀 Automatisch uitlijnen via AI
+              </button>
+              <div id="ai-status" class="help-text" style="display:none; text-align:center; font-weight:600; color: var(--color-primary); margin-top:8px;">
+                Analyseren...
+              </div>
+
+              <!-- Color presetting for tracing -->
+              <div class="drawer-section" style="margin-top:15px; border-top:1px solid var(--border-glass); padding-top:15px;">
+                <h4 style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:8px;">Automatische Route-kleur Volger:</h4>
+                <div class="color-presets">
+                  <button class="color-preset-btn active" data-color="#dc2626" style="background-color: #dc2626;"></button>
+                  <button class="color-preset-btn" data-color="#2563eb" style="background-color: #2563eb;"></button>
+                  <button class="color-preset-btn" data-color="#16a34a" style="background-color: #16a34a;"></button>
+                  <button class="color-preset-btn" data-color="#9333ea" style="background-color: #9333ea;"></button>
+                  <button class="color-preset-btn" data-color="#ea580c" style="background-color: #ea580c;"></button>
+                  <button class="color-preset-btn" data-color="#eab308" style="background-color: #eab308;"></button>
+                  <button class="color-preset-btn" data-color="#18181b" style="background-color: #18181b; border: 1px solid white;"></button>
+                  <label class="color-picker-label">
+                    <input type="color" id="input-color-picker" value="#dc2626" />
+                    <span>🎨</span>
+                  </label>
+                </div>
+                
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; font-size:0.75rem;">
+                  <span id="color-rgb" class="mono text-muted">RGB(220, 38, 38)</span>
+                  <div id="color-preview" class="color-preview-box" style="background-color:#dc2626; width:14px; height:14px; border-radius:3px;"></div>
+                </div>
+
+                <div class="slider-control" style="margin-top:10px;">
+                  <label for="slider-tolerance">Gevoeligheid (Tolerantie): <span id="tolerance-value" class="mono text-cyan">40</span></label>
+                  <input type="range" id="slider-tolerance" min="15" max="100" value="40" />
+                </div>
+              </div>
+
+              <!-- Reset Calibration button -->
+              <button id="btn-cal-clear" class="btn btn-danger btn-full hidden" style="margin-top:12px;">
+                Reset AI-Kalibratie & Foto
               </button>
             </div>
           </div>
-          
         </div>
-      </section>
 
-    </main>
-
-    <!-- Welcome Guide Dialog -->
-    <dialog id="guide-dialog" class="custom-dialog">
-      <div class="dialog-content">
-        <h2>Welkom bij MapSnap GPX! 🥾🗺️</h2>
-        <p>Zet eenvoudig getekende routes op folders, wandelkaarten of borden om naar een GPX bestand voor je telefoon. Volg deze stappen:</p>
-        
-        <ol class="guide-steps">
-          <li>
-            <strong>Laad een Foto:</strong> 
-            Neem een foto van een routekaart (bijv. een infobord langs de weg) of upload een afbeelding.
-          </li>
-          <li>
-            <strong>Kalibreer de Foto (Stap 1):</strong>
-            Koppel twee punten op de foto aan dezelfde plekken op de echte kaart (bijv. een T-splitsing of kerktoren). 
-            Dit vertaalt fotopixels naar GPS coördinaten.
-          </li>
-          <li>
-            <strong>Digitaliseer Route (Stap 2):</strong>
-            Tik op de foto om de route te tekenen. Gebruik de <em>Kleur-volger</em> om gekleurde routelijnen automatisch te laten traceren!
-          </li>
-          <li>
-            <strong>Route Snapping & Aanpassen (Stap 3):</strong>
-            De route wordt via <em>BRouter</em> automatisch op echte paden gelegd. Versleep de blauwe markers op de digitale kaart om de route handmatig fijner af te stellen.
-          </li>
-          <li>
-            <strong>Download GPX (Stap 4):</strong>
-            Download je GPX en open hem in je favoriete wandelapp!
-          </li>
-        </ol>
-
-        <button id="btn-close-guide" class="btn btn-primary">Aan de slag!</button>
       </div>
-    </dialog>
+    </section>
 
-    <!-- Approximate Location Query Dialog -->
+    <!-- Bottom Navigation Bar -->
+    <nav id="bottom-navigation">
+      <button class="nav-tab-btn active" data-panel="dashboard" title="Dashboard">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="4"></line><line x1="8" y1="2" x2="8" y2="4"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        <span>HUD / REC</span>
+      </button>
+      <button class="nav-tab-btn" data-panel="planner" title="Route Planner">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+        <span>Plan</span>
+      </button>
+      <button class="nav-tab-btn" data-panel="measure" title="Meten met latje">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="9" x2="19" y2="9"></line><line x1="5" y1="15" x2="19" y2="15"></line><line x1="9" y1="9" x2="9" y2="15"></line><line x1="15" y1="9" x2="15" y2="15"></line><line x1="3" y1="5" x2="21" y2="5"></line><line x1="3" y1="19" x2="21" y2="19"></line></svg>
+        <span>Latje</span>
+      </button>
+      <button class="nav-tab-btn" data-panel="layers" title="Kaartlagen">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+        <span>Kaart</span>
+      </button>
+      <button class="nav-tab-btn" data-panel="poi" title="POIs & Waypoints">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"></circle><path d="M12 21.7C10 18.2 6 13.5 6 10a6 6 0 1 1 12 0c0 3.5-4 8.2-6 11.7z"></path></svg>
+        <span>POIs</span>
+      </button>
+      <button class="nav-tab-btn" data-panel="photosnap" title="Foto-Overlay">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        <span>Overlay</span>
+      </button>
+    </nav>
+
+    <!-- Address Location Search Dialog -->
     <dialog id="location-dialog" class="custom-dialog">
       <div class="dialog-content">
-        <h3>Waar is de route ongeveer?</h3>
-        <p>De route kon niet automatisch in de buurt worden gevonden. Geef een plaatsnaam of gebied op om de kaart te centreren.</p>
+        <h3>Zoek op Locatie</h3>
+        <p>Voer een plaats, adres of gebied in om de kaart te verplaatsen.</p>
         <div class="input-row">
-          <input type="text" id="input-search-location" placeholder="Bijv. Utrechtse Heuvelrug, Apeldoorn..." />
+          <input type="text" id="input-search-location" placeholder="Bijv. Veluwezoom, Apeldoorn..." />
           <button id="btn-search-location" class="btn btn-primary">Zoek</button>
         </div>
         <div id="search-results" class="search-results-list"></div>
-        <button id="btn-close-location-dialog" class="btn btn-secondary" style="margin-top:12px;">Annuleer</button>
+        <button id="btn-close-location-dialog" class="btn btn-secondary" style="margin-top:12px; width:100%;">Sluiten</button>
+      </div>
+    </dialog>
+
+    <!-- Guide Dialog -->
+    <dialog id="guide-dialog" class="custom-dialog">
+      <div class="dialog-content">
+        <h2>Welkom bij GeoForge Navigator! 🧭🥾</h2>
+        <p>Een superstrakke, technische GPS app voor buiten. Hier is een korte uitleg van wat je kunt doen:</p>
+        
+        <ol class="guide-steps">
+          <li>
+            <strong>HUD & REC:</strong> 
+            Bekijk je snelheid, hoogte, kompasrichting en nauwkeurigheid. Start een track-opname om je afgelegde route op te slaan en te exporteren als GPX.
+          </li>
+          <li>
+            <strong>Plan Route:</strong>
+            Tik op de kaart om een route te tekenen. De app snapt de lijn automatisch op wandel- of fietspaden met behulp van de BRouter-engine.
+          </li>
+          <li>
+            <strong>Meetlatje:</strong>
+            Plaats meerdere spelden op de kaart om afstanden en kompasrichtingen te meten tussen verschillende punten in het veld.
+          </li>
+          <li>
+            <strong>Uitgebreide Kaarten:</strong>
+            Wissel tussen topografische, satelliet en donkere kaarten. Gebruik de <strong>Kadaster Topotijdreis</strong> om historische kaarten van 1815 tot 2020 te bekijken met een tijdschuif!
+          </li>
+          <li>
+            <strong>POIs & Waypoints:</strong>
+            Scan de omgeving live voor drinkwater, campings, uitzichtpunten en bergtoppen uit OpenStreetMap, of sla je eigen waypoints op.
+          </li>
+          <li>
+            <strong>Kaart snap (Overlay):</strong>
+            Kalibreer een foto van een routekaart (bijv. een infobord) op de echte kaart om deze direct over je kaart heen te projecteren.
+          </li>
+        </ol>
+
+        <button id="btn-close-guide" class="btn btn-primary" style="width:100%; margin-top:10px;">Aan de slag!</button>
       </div>
     </dialog>
 
