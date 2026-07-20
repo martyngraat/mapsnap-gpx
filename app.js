@@ -274,6 +274,12 @@ const API_REGISTRY = {
   },
   
   // Category: Kaart Overlays
+  'norway_topo': {
+    name: 'Noorwegen Topo (Kartverket)',
+    category: 'Kaart Overlays',
+    description: 'Laadt de officiële topografische kaart van Noorwegen.',
+    default: true
+  },
   'rainviewer': {
     name: 'RainViewer Buienradar',
     category: 'Kaart Overlays',
@@ -389,6 +395,11 @@ function initMap() {
   state.baseLayers.dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 20,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  });
+
+  state.baseLayers.norwaytopo = L.tileLayer('https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png', {
+    maxZoom: 18,
+    attribution: '&copy; <a href="https://www.kartverket.no/">Kartverket</a>'
   });
 
   // Default basemap is OpenTopoMap
