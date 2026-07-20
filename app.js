@@ -168,7 +168,25 @@ const el = {
   searchResults: document.getElementById('search-results'),
   btnCloseLocationDialog: document.getElementById('btn-close-location-dialog'),
   
+  // Nature Panel
+  btnCameraTrigger: document.getElementById('btn-camera-trigger'),
+  btnUploadTrigger: document.getElementById('btn-upload-trigger'),
+  inputNaturePhoto: document.getElementById('input-nature-photo'),
+  naturePhotoPreview: document.getElementById('nature-photo-preview'),
+  imgNaturePreview: document.getElementById('img-nature-preview'),
+  natureAiResult: document.getElementById('nature-ai-result'),
+  btnScanBiodiversity: document.getElementById('btn-scan-biodiversity'),
+  natureGeologyBox: document.getElementById('nature-geology-box'),
+  geologyDetails: document.getElementById('geology-details'),
+  natureSpeciesBox: document.getElementById('nature-species-box'),
+  speciesDetails: document.getElementById('species-details'),
+  natureBirdsBox: document.getElementById('nature-birds-box'),
+  birdsDetails: document.getElementById('birds-details'),
+  btnShareLocation: document.getElementById('btn-share-location'),
+
+  // Dialogs
   settingsDialog: document.getElementById('settings-dialog'),
+  inputGeminiKey: document.getElementById('input-gemini-key'),
   inputOrsKey: document.getElementById('input-ors-key'),
   inputW3wKey: document.getElementById('input-w3w-key'),
   btnSaveSettings: document.getElementById('btn-save-settings'),
@@ -280,6 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupOverlaysManager();
   setupPoiExplorer();
   setupSettingsDialog();
+  setupNaturePanel();
   
   // LocalStorage check for items
   loadSavedData();
@@ -456,6 +475,7 @@ function searchLocationAddress() {
 function setupSettingsDialog() {
   el.btnQuickSettings.addEventListener('click', () => {
     // Load current values
+    el.inputGeminiKey.value = localStorage.getItem('geoforge_gemini_key') || '';
     el.inputOrsKey.value = localStorage.getItem('geoforge_ors_key') || '';
     el.inputW3wKey.value = localStorage.getItem('geoforge_w3w_key') || '';
     el.settingsDialog.showModal();
@@ -466,6 +486,7 @@ function setupSettingsDialog() {
   });
 
   el.btnSaveSettings.addEventListener('click', () => {
+    localStorage.setItem('geoforge_gemini_key', el.inputGeminiKey.value.trim());
     localStorage.setItem('geoforge_ors_key', el.inputOrsKey.value.trim());
     localStorage.setItem('geoforge_w3w_key', el.inputW3wKey.value.trim());
     el.settingsDialog.close();
@@ -1700,7 +1721,7 @@ function scanForPois() {
       subqueries += `node["tourism"="camp_site"](${bbox});node["tourism"="caravan_site"](${bbox});node["backcountry"="yes"](${bbox});`;
     }
     if (cat === 'viewpoint') {
-      subqueries += `node["tourism"="viewpoint"](${bbox});node["natural"="peak"](${bbox});`;
+      subqueries += `node["tourism"="viewpoint"](${bbox});node["natural"="peak"](${bbox});node["natural"="tree"]["denotation"="monument"](${bbox});node["natural"="tree"]["monument"="yes"](${bbox});`;
     }
     if (cat === 'opentripmap') {
       subqueries += `node["historic"](${bbox});node["tourism"="museum"](${bbox});node["tourism"="attraction"](${bbox});`;
@@ -1863,6 +1884,7 @@ function getPoiCategory(poi) {
   if (tags.amenity === 'drinking_water' || tags.man_made === 'water_well') return 'drinking_water';
   if (tags.tourism === 'camp_site' || tags.backcountry === 'yes') return 'camp_site';
   if (tags.tourism === 'viewpoint' || tags.natural === 'peak') return 'viewpoint';
+  if (tags.natural === 'tree' && (tags.denotation === 'monument' || tags.monument === 'yes' || tags.heritage === 'yes')) return 'monument_tree';
   if (tags.emergency) return 'emergency';
   return 'poi';
 }
@@ -1872,6 +1894,7 @@ function getPoiMarkerColor(cat) {
     drinking_water: '#00f3ff',
     camp_site: '#00ff66',
     viewpoint: '#ffaa00',
+    monument_tree: '#00ff66',
     emergency: '#ff3366'
   };
   return colors[cat] || '#ffffff';
@@ -1882,6 +1905,7 @@ function getPoiMarkerSymbol(cat) {
     drinking_water: '💧',
     camp_site: '⛺',
     viewpoint: '🔭',
+    monument_tree: '🌳',
     emergency: '🚨'
   };
   return symbols[cat] || '📍';
@@ -2097,4 +2121,223 @@ function escapeXml(unsafe) {
       case '"': return '&quot;';
     }
   });
+}
+
+// --- NATUUR & ONTDEK PANEL LOGIC ---
+function setupNaturePanel() {
+  // Bind camera and file upload triggers
+  el.btnCameraTrigger.addEventListener('click', () => {
+    el.inputNaturePhoto.setAttribute('capture', 'environment');
+    el.inputNaturePhoto.click();
+  });
+
+  el.btnUploadTrigger.addEventListener('click', () => {
+    el.inputNaturePhoto.removeAttribute('capture');
+    el.inputNaturePhoto.click();
+  });
+
+  el.inputNaturePhoto.addEventListener('change', handleNaturePhotoUpload);
+
+  // Biodiversity & Geology scan trigger
+  el.btnScanBiodiversity.addEventListener('click', scanBiodiversityAndGeology);
+
+  // Share location trigger
+  el.btnShareLocation.addEventListener('click', shareLocationAndRoute);
+}
+
+function handleNaturePhotoUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const key = localStorage.getItem('geoforge_gemini_key');
+  if (!key) {
+    showToast('Voer eerst een Gemini API-sleutel in via de Instellingen (tandwiel bovenin).', 'warning');
+    return;
+  }
+
+  // Display preview
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    el.imgNaturePreview.src = evt.target.result;
+    el.naturePhotoPreview.classList.remove('hidden');
+
+    el.natureAiResult.classList.remove('hidden');
+    el.natureAiResult.innerHTML = '<div style="text-align:center; color:var(--color-cyan);">AI analyseert de soort... ⏳</div>';
+
+    // Call Gemini API
+    const base64Data = evt.target.result.split(',')[1];
+    const requestData = {
+      contents: [{
+        parts: [
+          { text: "Identificeer de plant, dier, vogel, insect, blad of het dierspoor op deze afbeelding. Geef antwoord in het Nederlands. Antwoord uitsluitend in nette, gestructureerde HTML-tags (zonder markdown of ```html wrapper). Gebruik exact deze structuur:\n<h4>[Nederlandse Naam (Wetenschappelijke Naam)]</h4>\n<p><strong>Status:</strong> [Eetbaar / Giftig / Beschermd / Algemeen / Veilig]</p>\n<p><strong>Kenmerken:</strong> [Korte beschrijving van uiterlijk of gedrag, max 3 regels]</p>\n<p><strong>Leuke Weetjes:</strong> [Kort weetje over de soort of ecologische rol, max 2 regels]" },
+          {
+            inlineData: {
+              mimeType: file.type,
+              data: base64Data
+            }
+          }
+        ]
+      }]
+    };
+
+    fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${key}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestData)
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('API key invalid or limit exceeded');
+        return res.json();
+      })
+      .then(data => {
+        if (data.candidates && data.candidates[0].content.parts[0].text) {
+          let text = data.candidates[0].content.parts[0].text;
+          text = text.replace(/```html/g, '').replace(/```/g, '').trim();
+          el.natureAiResult.innerHTML = text;
+        } else {
+          el.natureAiResult.innerHTML = '<div style="color:var(--color-red);">Kon geen resultaat genereren. Probeer een duidelijkere foto.</div>';
+        }
+      })
+      .catch(err => {
+        console.error('Gemini vision error:', err);
+        el.natureAiResult.innerHTML = '<div style="color:var(--color-red);">AI Identificatie mislukt. Controleer je Gemini API Key of internetverbinding.</div>';
+      });
+  };
+  reader.readAsDataURL(file);
+}
+
+function scanBiodiversityAndGeology() {
+  const center = map.getCenter();
+  const lat = center.lat;
+  const lng = center.lng;
+
+  showToast('Omgeving scannen...');
+
+  // 1. Macrostrat Geology API
+  el.natureGeologyBox.classList.remove('hidden');
+  el.geologyDetails.innerHTML = '<span style="color:var(--text-muted);">Bodem scannen...</span>';
+
+  fetch(`https://macrostrat.org/api/v2/geology?lat=${lat}&lng=${lng}`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.success && data.success.data && data.success.data.length > 0) {
+        const geo = data.success.data[0];
+        el.geologyDetails.innerHTML = `
+          <strong>Tijdperk:</strong> ${geo.era || 'Onbekend'}<br/>
+          <strong>Formatie:</strong> ${geo.map_unit_name || 'Niet benoemd'}<br/>
+          <strong>Steensoort:</strong> ${geo.lithology || 'Onbekend'}<br/>
+          <strong>Omschrijving:</strong> ${geo.comments || 'Geen details beschikbaar.'}
+        `;
+      } else {
+        el.geologyDetails.innerHTML = '<span style="color:var(--color-red);">Geen bodemgegevens gevonden op deze coördinaten.</span>';
+      }
+    })
+    .catch(() => {
+      el.geologyDetails.innerHTML = '<span style="color:var(--color-red);">Netwerkfout bij bodemscan.</span>';
+    });
+
+  // 2. GBIF Checklist
+  el.natureSpeciesBox.classList.remove('hidden');
+  el.speciesDetails.innerHTML = '<span style="color:var(--text-muted);">Flora & Fauna checklist laden...</span>';
+
+  fetch(`https://api.gbif.org/v1/occurrence/search?decimalLatitude=${lat}&decimalLongitude=${lng}&radius=1000&limit=40`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.results && data.results.length > 0) {
+        el.speciesDetails.innerHTML = '';
+        const speciesCounts = {};
+        const speciesGroups = {};
+        
+        data.results.forEach(obs => {
+          if (obs.vernacularName || obs.scientificName) {
+            const name = obs.vernacularName || obs.scientificName;
+            speciesCounts[name] = (speciesCounts[name] || 0) + 1;
+            speciesGroups[name] = obs.class || obs.kingdom || 'Algemeen';
+          }
+        });
+
+        const sortedSpecies = Object.keys(speciesCounts).sort((a,b) => speciesCounts[b] - speciesCounts[a]).slice(0, 8);
+
+        sortedSpecies.forEach(name => {
+          const div = document.createElement('div');
+          div.className = 'species-item-nature';
+          
+          let emoji = '🌲';
+          const group = speciesGroups[name];
+          if (group === 'Mammalia') emoji = '🦊';
+          else if (group === 'Aves') emoji = '🐦';
+          else if (group === 'Insecta') emoji = '🦋';
+          else if (group === 'Liliopsida' || group === 'Magnoliopsida') emoji = '🌸';
+          else if (group === 'Fungi') emoji = '🍄';
+
+          div.innerHTML = `
+            <span>${emoji} <strong>${name}</strong></span>
+            <span class="species-name-lat">${group.substring(0, 10)}</span>
+          `;
+          el.speciesDetails.appendChild(div);
+        });
+      } else {
+        el.speciesDetails.innerHTML = '<div class="no-data-text">Geen biologische registraties gevonden in dit grid.</div>';
+      }
+    })
+    .catch(() => {
+      el.speciesDetails.innerHTML = '<div class="no-data-text" style="color:var(--color-red);">Kon soortgegevens niet laden.</div>';
+    });
+
+  // 3. Xeno-Canto bird songs
+  el.natureBirdsBox.classList.remove('hidden');
+  el.birdsDetails.innerHTML = '<span style="color:var(--text-muted);">Geluiden zoeken...</span>';
+
+  fetch(`https://xeno-canto.org/api/2/recordings?query=lat:${lat}%20lon:${lng}%20box:0.15`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.recordings && data.recordings.length > 0) {
+        el.birdsDetails.innerHTML = '';
+        const recs = data.recordings.slice(0, 5);
+        recs.forEach(rec => {
+          const div = document.createElement('div');
+          div.className = 'bird-item-nature';
+          const birdName = rec.en || rec.gen + ' ' + rec.sp;
+          
+          div.innerHTML = `
+            <div class="bird-header">
+              <span>🐦 <strong>${birdName}</strong></span>
+              <span class="species-name-lat">${rec.gen} ${rec.sp}</span>
+            </div>
+            <audio controls class="bird-audio-player" src="${rec.file}"></audio>
+          `;
+          el.birdsDetails.appendChild(div);
+        });
+      } else {
+        el.birdsDetails.innerHTML = '<div class="no-data-text">Geen vogelgeluid-opnames gevonden voor deze locatie.</div>';
+      }
+    })
+    .catch(() => {
+      el.birdsDetails.innerHTML = '<div class="no-data-text" style="color:var(--color-red);">Fout bij inladen vogelgeluiden.</div>';
+    });
+}
+
+function shareLocationAndRoute() {
+  if (!navigator.share) {
+    showToast('Delen wordt niet ondersteund door deze browser.', 'error');
+    return;
+  }
+
+  const center = map.getCenter();
+  const lat = center.lat;
+  const lng = center.lng;
+  const mapLink = `https://martyngraat.github.io/mapsnap-gpx/`;
+
+  let shareText = `GeoForge Navigator live locatie:\n📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}\n`;
+  if (state.recordingState.isRecording) {
+    shareText += `Route in voortgang: ${state.recordingState.distance.toFixed(2)} km gelopen.\n`;
+  }
+  shareText += `Bekijk op kaart: ${mapLink}`;
+
+  navigator.share({
+    title: 'GeoForge Navigator Positie',
+    text: shareText
+  })
+    .then(() => showToast('Locatie succesvol gedeeld!'))
+    .catch(err => console.log('Share failed:', err));
 }

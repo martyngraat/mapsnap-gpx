@@ -146,7 +146,7 @@
             </div>
           </div>
 
-          <!-- Collapsible Lokale Informatie Card (Open-Meteo, Sunrise, AQI, what3words) -->
+          <!-- Collapsible Lokale Informatie Card -->
           <div class="drawer-section" style="margin-top:15px; padding-top:15px;">
             <div class="collapse-trigger" id="local-info-trigger">
               <h3 class="section-title" style="margin-bottom:0;">📍 Lokale Omgeving & Weer</h3>
@@ -244,7 +244,7 @@
             <button id="btn-plan-clear" class="btn btn-danger btn-half" disabled>Wis Alles</button>
           </div>
           
-          <!-- Route Isochrone (Walk coverage area) -->
+          <!-- Route Isochrone -->
           <div class="drawer-section" style="margin-top:15px; padding-top:15px;">
             <h3 class="section-title">Wandelbereik (Isochroom)</h3>
             <p class="panel-desc" style="margin-bottom:8px;">Tekent een grens die laat zien hoever je vanaf het kaartmidden kunt wandelen.</p>
@@ -260,7 +260,7 @@
           </button>
         </div>
 
-        <!-- PANEL 3: Meetlatje (Ruler over multiple points) -->
+        <!-- PANEL 3: Meetlatje -->
         <div id="panel-measure" class="drawer-panel">
           <p class="panel-desc">Meten met een latje over meerdere punten. Klik op de kaart om meetpunten te plaatsen en zie de segmentafstanden en kompasrichtingen.</p>
           
@@ -285,8 +285,6 @@
 
         <!-- PANEL 4: Kaartlagen & Historische Kaart -->
         <div id="panel-layers" class="drawer-panel">
-          
-          <!-- Basemaps Selection -->
           <div class="drawer-section">
             <h3 class="section-title">Basiskaarten</h3>
             <div class="basemap-grid">
@@ -340,7 +338,7 @@
           </div>
         </div>
 
-        <!-- PANEL 5: Kaart Overlays (Hike, Cycle, MTB, Weather, Environmental) -->
+        <!-- PANEL 5: Kaart Overlays -->
         <div id="panel-overlays" class="drawer-panel">
           <p class="panel-desc">Schakel extra routenetwerken en informatieve lagen in die over de basiskaart heen worden gelegd.</p>
           
@@ -426,7 +424,68 @@
           </div>
         </div>
 
-        <!-- PANEL 6: POI Explorer & Waypoints -->
+        <!-- PANEL 6: Natuur & Ontdek (New dedicated panel!) -->
+        <div id="panel-nature" class="drawer-panel">
+          <p class="panel-desc">Ontdek de biodiversiteit en bodem van je omgeving, en scan planten en dieren met AI.</p>
+          
+          <!-- Gemini AI Vision Nature Scanner -->
+          <div class="drawer-section">
+            <h3 class="section-title">📷 Gemini AI Natuur Scanner</h3>
+            <p class="panel-desc" style="margin-bottom:8px;">Maak of upload een foto van een dier, plant, insect of spoor voor AI-identificatie.</p>
+            <div class="control-buttons-row">
+              <button id="btn-camera-trigger" class="btn btn-secondary btn-half">📸 Camera</button>
+              <button id="btn-upload-trigger" class="btn btn-secondary btn-half">📁 Foto Kiezen</button>
+              <input type="file" id="input-nature-photo" accept="image/*" style="display:none;" />
+            </div>
+            
+            <div id="nature-photo-preview" class="photo-preview-box hidden" style="margin-top:10px; text-align:center;">
+              <img id="img-nature-preview" src="" style="max-height:120px; border-radius:var(--border-radius-sm); border:1px solid var(--border-color);" />
+            </div>
+            
+            <div id="nature-ai-result" class="ai-result-box hidden" style="margin-top:10px; background:var(--bg-dark-900); padding:10px; border-radius:var(--border-radius-sm); border-left:3px solid var(--color-cyan); font-size:0.75rem; line-height:1.45;">
+              <!-- Results injected here -->
+            </div>
+          </div>
+
+          <!-- GBIF Checklist & Macrostrat Geology -->
+          <div class="drawer-section">
+            <h3 class="section-title">🪨 Bodem & Lokale Soorten</h3>
+            <button id="btn-scan-biodiversity" class="btn btn-primary btn-full">
+              🔍 Scan Omgeving (Bodem & Natuur)
+            </button>
+            
+            <!-- Geology display -->
+            <div id="nature-geology-box" class="nature-card hidden" style="margin-top:12px;">
+              <div class="card-header-nature">🪨 Geologische Ondergrond</div>
+              <div id="geology-details" class="card-body-nature mono">Laden...</div>
+            </div>
+
+            <!-- GBIF Species list -->
+            <div id="nature-species-box" class="nature-card hidden" style="margin-top:10px;">
+              <div class="card-header-nature">🦉 Geregistreerde Diersoorten (GBIF)</div>
+              <div id="species-details" class="card-body-nature list-box-nature">
+                <!-- Checklist items -->
+              </div>
+            </div>
+
+            <!-- Xeno-Canto bird songs -->
+            <div id="nature-birds-box" class="nature-card hidden" style="margin-top:10px;">
+              <div class="card-header-nature">🎵 Geluiden van Vogels in de regio</div>
+              <div id="birds-details" class="card-body-nature list-box-nature">
+                <!-- Bird songs with HTML5 audio player -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Web Share API Button -->
+          <div class="drawer-section">
+            <button id="btn-share-location" class="btn btn-secondary btn-full">
+              📤 Deel Huidige Locatie & Route
+            </button>
+          </div>
+        </div>
+
+        <!-- PANEL 7: POI Explorer & Waypoints -->
         <div id="panel-poi" class="drawer-panel">
           <p class="panel-desc">Zoek live in de buurt naar handige punten (POI's) of voeg je eigen Waypoint toe.</p>
           
@@ -488,30 +547,34 @@
       </div>
     </section>
 
-    <!-- Bottom Navigation Bar -->
+    <!-- Bottom Navigation Bar (7 Tabs!) -->
     <nav id="bottom-navigation">
       <button class="nav-tab-btn active" data-panel="dashboard" title="Dashboard">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="4"></line><line x1="8" y1="2" x2="8" y2="4"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="4"></line><line x1="8" y1="2" x2="8" y2="4"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
         <span>HUD / REC</span>
       </button>
       <button class="nav-tab-btn" data-panel="planner" title="Route Planner">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
         <span>Plan</span>
       </button>
       <button class="nav-tab-btn" data-panel="measure" title="Meten met latje">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="9" x2="19" y2="9"></line><line x1="5" y1="15" x2="19" y2="15"></line><line x1="9" y1="9" x2="9" y2="15"></line><line x1="15" y1="9" x2="15" y2="15"></line><line x1="3" y1="5" x2="21" y2="5"></line><line x1="3" y1="19" x2="21" y2="19"></line></svg>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="9" x2="19" y2="9"></line><line x1="5" y1="15" x2="19" y2="15"></line><line x1="9" y1="9" x2="9" y2="15"></line><line x1="15" y1="9" x2="15" y2="15"></line><line x1="3" y1="5" x2="21" y2="5"></line><line x1="3" y1="19" x2="21" y2="19"></line></svg>
         <span>Latje</span>
       </button>
       <button class="nav-tab-btn" data-panel="layers" title="Basiskaarten">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line></svg>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line></svg>
         <span>Kaart</span>
       </button>
       <button class="nav-tab-btn" data-panel="overlays" title="Overlays">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
         <span>Overlays</span>
       </button>
+      <button class="nav-tab-btn" data-panel="nature" title="Natuur & Bodem">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c1.4 0 2.8 1.1 3.5 2.5.7-1.4 2-2.5 3.5-2.5 2.2 0 4 1.8 4 4 0 4.8-5.3 9.4-7.1 11-.2.2-.5.3-.9.3H12V2z"></path><path d="M12 22c-1.4 0-2.8-1.1-3.5-2.5C7.8 20.9 6.5 22 5 22c-2.2 0-4-1.8-4-4 0-4.8 5.3-9.4 7.1-11 .2-.2.5-.3.9-.3H12v15z"></path></svg>
+        <span>Natuur</span>
+      </button>
       <button class="nav-tab-btn" data-panel="poi" title="POIs & Waypoints">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"></circle><path d="M12 21.7C10 18.2 6 13.5 6 10a6 6 0 1 1 12 0c0 3.5-4 8.2-6 11.7z"></path></svg>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"></circle><path d="M12 21.7C10 18.2 6 13.5 6 10a6 6 0 1 1 12 0c0 3.5-4 8.2-6 11.7z"></path></svg>
         <span>POIs</span>
       </button>
     </nav>
@@ -537,15 +600,21 @@
         <p>Voeg optionele API-sleutels toe om de functionaliteit van de app uit te breiden.</p>
         
         <div class="select-control" style="margin-bottom:12px;">
+          <label for="input-gemini-key">Gemini API Key (AI Natuur Scanner):</label>
+          <input type="password" id="input-gemini-key" placeholder="Vul je Gemini API sleutel in..." style="width:100%; background:var(--bg-dark-900); border:1px solid var(--border-color); color:var(--text-primary); padding:10px; border-radius:var(--border-radius-sm); outline:none;" />
+          <span class="help-text" style="font-size:0.65rem; color:var(--text-muted);">Vereist voor de AI Natuur Scanner. Gratis aan te maken op aistudio.google.com.</span>
+        </div>
+
+        <div class="select-control" style="margin-bottom:12px;">
           <label for="input-ors-key">OpenRouteService API Key (Wandelbereik):</label>
           <input type="password" id="input-ors-key" placeholder="Vul je ORS sleutel in..." style="width:100%; background:var(--bg-dark-900); border:1px solid var(--border-color); color:var(--text-primary); padding:10px; border-radius:var(--border-radius-sm); outline:none;" />
-          <span class="help-text" style="font-size:0.65rem; color:var(--text-muted);">Gratis aan te maken op openrouteservice.org. Indien leeg gebruikt de app een geometrische benadering.</span>
+          <span class="help-text" style="font-size:0.65rem; color:var(--text-muted);">Optioneel. Indien leeg gebruikt de app een geometrische benadering.</span>
         </div>
 
         <div class="select-control" style="margin-bottom:15px;">
           <label for="input-w3w-key">what3words API Key (Lokale Info):</label>
           <input type="password" id="input-w3w-key" placeholder="Vul je what3words sleutel in..." style="width:100%; background:var(--bg-dark-900); border:1px solid var(--border-color); color:var(--text-primary); padding:10px; border-radius:var(--border-radius-sm); outline:none;" />
-          <span class="help-text" style="font-size:0.65rem; color:var(--text-muted);">Optioneel. Indien leeg toont de app de standaard Plus Code (Open Location Code).</span>
+          <span class="help-text" style="font-size:0.65rem; color:var(--text-muted);">Optioneel. Indien leeg toont de app de standaard coördinaten.</span>
         </div>
 
         <button id="btn-save-settings" class="btn btn-primary btn-full">Instellingen Opslaan</button>
@@ -574,15 +643,11 @@
           </li>
           <li>
             <strong>Uitgebreide Kaarten:</strong>
-            Wissel tussen topografische, satelliet en donkere kaarten. Gebruik de <strong>Kadaster Topotijdreis</strong> om historische kaarten van 1815 tot 2020 te bekijken met een tijdschuif!
+            Wissel tussen topografische, satelliet en donkere kaarten. Gebruik de <strong>Kadaster/OpenHistoricalMap</strong> laag om geschiedenis over de hele wereld te bekijken met een tijdschuif!
           </li>
           <li>
-            <strong>Overlays inschakelen:</strong>
-            Bekijk wandelnetwerken, fietsnetwerken en mountainbikeroutes direct over elke basiskaart getekend.
-          </li>
-          <li>
-            <strong>POIs & Waypoints:</strong>
-            Scan de omgeving live voor drinkwater, campings, uitzichtpunten en bergtoppen uit OpenStreetMap, of sla je eigen waypoints op.
+            <strong>Overlays & Natuur:</strong>
+            Schakel routenetwerken of regenradar in via Overlays. Ontdek de bodem, vogelgeluiden en scan soorten via de nieuwe <strong>Natuur</strong> tab!
           </li>
         </ol>
 
