@@ -1,9 +1,9 @@
-const CACHE_NAME = 'geoforge-v22';
+const CACHE_NAME = 'geoforge-v23';
 const ASSETS = [
   './',
   './index.html',
-  './index.css?v=22',
-  './app.js?v=22',
+  './index.css?v=23',
+  './app.js?v=23',
   './manifest.json',
   './icon.svg',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
