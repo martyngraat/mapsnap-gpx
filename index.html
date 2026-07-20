@@ -351,6 +351,18 @@
                   <span class="option-name">🇳🇴 Noorwegen Topo</span>
                 </span>
               </label>
+              <label id="basemap-maptiler-outdoor" class="basemap-option api-module-ui hidden" data-api="maptiler_maps">
+                <input type="radio" name="basemap" value="maptileroutdoor" />
+                <span class="option-card">
+                  <span class="option-name">🏔️ MapTiler Outdoor</span>
+                </span>
+              </label>
+              <label id="basemap-maptiler-winter" class="basemap-option api-module-ui hidden" data-api="maptiler_maps">
+                <input type="radio" name="basemap" value="maptilerwinter" />
+                <span class="option-card">
+                  <span class="option-name">❄️ MapTiler Winter</span>
+                </span>
+              </label>
               <label class="basemap-option" style="grid-column: span 2;">
                 <input type="radio" name="basemap" value="historical" />
                 <span class="option-card">
@@ -656,10 +668,16 @@
           <span class="help-text" style="font-size:0.65rem; color:var(--text-muted);">Optioneel. Indien leeg gebruikt de app een geometrische benadering.</span>
         </div>
 
-        <div class="select-control" style="margin-bottom:15px;">
+        <div class="select-control" style="margin-bottom:12px;">
           <label for="input-w3w-key">what3words API Key (Lokale Info):</label>
           <input type="password" id="input-w3w-key" placeholder="Vul je what3words sleutel in..." style="width:100%; background:var(--bg-dark-900); border:1px solid var(--border-color); color:var(--text-primary); padding:10px; border-radius:var(--border-radius-sm); outline:none;" />
           <span class="help-text" style="font-size:0.65rem; color:var(--text-muted);">Optioneel. Indien leeg toont de app de standaard coördinaten.</span>
+        </div>
+
+        <div class="select-control" style="margin-bottom:15px;">
+          <label for="input-maptiler-key">MapTiler API Key (Outdoor/Winter kaarten):</label>
+          <input type="password" id="input-maptiler-key" placeholder="Vul je MapTiler API sleutel in..." style="width:100%; background:var(--bg-dark-900); border:1px solid var(--border-color); color:var(--text-primary); padding:10px; border-radius:var(--border-radius-sm); outline:none;" />
+          <span class="help-text" style="font-size:0.65rem; color:var(--text-muted);">Optioneel. Gratis aan te maken op maptiler.com voor gedetailleerde outdoor/wintersportkaarten.</span>
         </div>
 
         <!-- Trigger for the Toolbox Configurator -->
