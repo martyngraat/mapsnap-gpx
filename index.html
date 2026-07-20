@@ -27,6 +27,11 @@
   <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.21/dist/maplibre-gl-leaflet.js"></script>
   <script src="https://unpkg.com/@openhistoricalmap/maplibre-gl-dates@latest/dist/maplibre-gl-dates.js"></script>
 
+  <!-- Firebase SDK Compat (Loaded via secure CDN for static PWA) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
   <!-- Custom Styles -->
   <link rel="stylesheet" href="index.css">
 </head>
@@ -102,6 +107,13 @@
       <span class="rec-dist mono" id="rec-distance-banner">0.00 km</span>
     </div>
 
+    <!-- Real-time Beacon Viewer Banner (Floats below telemetry HUD) -->
+    <div id="beacon-viewer-banner" class="hidden">
+      <span class="rec-dot pulsing" style="background:#00f3ff;"></span>
+      <span>Live tracking wandelaar: <strong id="beacon-viewer-name" class="text-cyan">...</strong></span>
+      <button id="btn-close-beacon-viewer" title="Stop live volgen">&times;</button>
+    </div>
+
     <!-- Slide-Up Bottom Drawer -->
     <section id="bottom-drawer" class="drawer-closed">
       <!-- Drawer Header / Handle -->
@@ -146,8 +158,25 @@
             </div>
           </div>
 
+          <!-- Real-time Location Sharing Beacon -->
+          <div class="drawer-section api-module-ui" data-api="live_beacon" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border-color);">
+            <h3 class="section-title">📡 Live Positie-Beacon</h3>
+            <div class="toggle-control" style="margin-bottom:8px;">
+              <label class="switch">
+                <input type="checkbox" id="chk-live-beacon" />
+                <span class="slider round"></span>
+              </label>
+              <span>Uitzenden starten (Deel live je locatie)</span>
+            </div>
+            
+            <div id="beacon-active-info" class="hidden" style="background:var(--bg-dark-900); padding:8px; border-radius:var(--border-radius-sm); border:1px solid var(--border-color); font-size:0.7rem; display:flex; flex-direction:column; gap:6px;">
+              <span style="color:#81c784; display:flex; align-items:center; gap:6px;"><span class="rec-dot pulsing" style="background:#81c784; width:8px; height:8px;"></span> Beacon Zenden Actief! ID: <strong id="beacon-id-val" class="mono text-cyan">...</strong></span>
+              <button id="btn-copy-beacon-link" class="btn btn-secondary" style="font-size:0.65rem; padding:6px; width:100%;">📋 Kopieer Deellink</button>
+            </div>
+          </div>
+
           <!-- Collapsible Lokale Informatie Card -->
-          <div class="drawer-section" style="margin-top:15px; padding-top:15px;">
+          <div class="drawer-section" style="margin-top:15px; padding-top:15px; border-top:1px solid var(--border-color);">
             <div class="collapse-trigger" id="local-info-trigger">
               <h3 class="section-title" style="margin-bottom:0;">📍 Lokale Omgeving & Weer</h3>
               <span class="chevron" id="local-info-chevron">▼</span>
@@ -604,6 +633,12 @@
         <p>Voeg optionele API-sleutels toe om de functionaliteit van de app uit te breiden.</p>
         
         <div class="select-control" style="margin-bottom:12px;">
+          <label for="input-firebase-config">Firebase SDK Config (JSON):</label>
+          <textarea id="input-firebase-config" placeholder='{"apiKey": "...", "authDomain": "...", ...}' style="width:100%; height:80px; background:var(--bg-dark-900); border:1px solid var(--border-color); color:var(--text-primary); padding:10px; border-radius:var(--border-radius-sm); outline:none; font-family:var(--font-mono); font-size:0.65rem; resize:vertical;"></textarea>
+          <span class="help-text" style="font-size:0.65rem; color:var(--text-muted);">Plaats hier de firebaseConfig JSON van je Firebase web app.</span>
+        </div>
+
+        <div class="select-control" style="margin-bottom:12px;">
           <label for="input-gemini-key">Gemini API Key (AI Natuur Scanner):</label>
           <input type="password" id="input-gemini-key" placeholder="Vul je Gemini API sleutel in..." style="width:100%; background:var(--bg-dark-900); border:1px solid var(--border-color); color:var(--text-primary); padding:10px; border-radius:var(--border-radius-sm); outline:none;" />
           <span class="help-text" style="font-size:0.65rem; color:var(--text-muted);">Vereist voor de AI Natuur Scanner. Gratis aan te maken op aistudio.google.com.</span>
@@ -626,12 +661,39 @@
           🧰 Beheer Actieve API Toolbox
         </button>
 
-        <button id="btn-save-settings" class="btn btn-primary btn-full">Instellingen Opslaan</button>
+        <!-- Firebase Cloud Multi-user Account section -->
+        <div class="drawer-section" style="margin-top:15px; border-top:1px solid var(--border-color); padding-top:15px; text-align:left;">
+          <h3 class="section-title">👤 GeoForge Cloud Account</h3>
+          
+          <div id="account-logged-out">
+            <p class="panel-desc" style="margin-bottom:8px;">Maak een account aan of log in om je tracks en waypoints veilig in de cloud te bewaren.</p>
+            <div class="select-control" style="margin-bottom:8px;">
+              <label for="input-auth-email">E-mailadres:</label>
+              <input type="email" id="input-auth-email" placeholder="naam@voorbeeld.nl" style="width:100%; background:var(--bg-dark-900); border:1px solid var(--border-color); color:var(--text-primary); padding:8px; border-radius:var(--border-radius-sm); outline:none;" />
+            </div>
+            <div class="select-control" style="margin-bottom:12px;">
+              <label for="input-auth-password">Wachtwoord:</label>
+              <input type="password" id="input-auth-password" placeholder="Minimaal 6 tekens..." style="width:100%; background:var(--bg-dark-900); border:1px solid var(--border-color); color:var(--text-primary); padding:8px; border-radius:var(--border-radius-sm); outline:none;" />
+            </div>
+            <div class="control-buttons-row">
+              <button id="btn-auth-login" class="btn btn-secondary btn-half">Inloggen</button>
+              <button id="btn-auth-register" class="btn btn-primary btn-half">Registreren</button>
+            </div>
+          </div>
+          
+          <div id="account-logged-in" class="hidden">
+            <p class="panel-desc" style="margin-bottom:8px;">Aangemeld als: <strong id="account-email-display" class="text-cyan">...</strong></p>
+            <p style="font-size:0.65rem; color:#81c784; margin-bottom:12px;">✔️ Cloud-synchronisatie actief</p>
+            <button id="btn-auth-logout" class="btn btn-danger btn-full">Uitloggen</button>
+          </div>
+        </div>
+
+        <button id="btn-save-settings" class="btn btn-primary btn-full" style="margin-top:15px;">Instellingen Opslaan</button>
         <button id="btn-close-settings-dialog" class="btn btn-secondary btn-full" style="margin-top:8px;">Annuleren</button>
       </div>
     </dialog>
 
-    <!-- Dynamic API-Toolbox Configurator Dialog (New modal) -->
+    <!-- Dynamic API-Toolbox Configurator Dialog -->
     <dialog id="toolbox-dialog" class="custom-dialog" style="max-width:480px; width:92%;">
       <div class="dialog-content">
         <h2>API-Toolbox Configuratiescherm 🧰</h2>

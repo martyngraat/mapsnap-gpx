@@ -53,6 +53,13 @@ const state = {
   waypointMarkersMap: [], // map markers references
   poiMarkers: [], // Overpass/Wiki/iNat POI markers on map
   activePoiCategories: ['drinking_water', 'camp_site', 'viewpoint'],
+
+  // Live Beacon State
+  beaconId: null,
+  beaconMarker: null,
+  beaconPolyline: null,
+  beaconCentered: false,
+  lastBeaconUpdateTime: null,
   
   // Map Layers & Overlays
   baseLayers: {},
@@ -196,7 +203,25 @@ const el = {
   toolboxModulesList: document.getElementById('toolbox-modules-list'),
   btnSaveToolbox: document.getElementById('btn-save-toolbox'),
   btnCloseToolbox: document.getElementById('btn-close-toolbox'),
-  
+
+  // Firebase & Live Beacon
+  inputFirebaseConfig: document.getElementById('input-firebase-config'),
+  inputAuthEmail: document.getElementById('input-auth-email'),
+  inputAuthPassword: document.getElementById('input-auth-password'),
+  btnAuthLogin: document.getElementById('btn-auth-login'),
+  btnAuthRegister: document.getElementById('btn-auth-register'),
+  btnAuthLogout: document.getElementById('btn-auth-logout'),
+  accountLoggedOut: document.getElementById('account-logged-out'),
+  accountLoggedIn: document.getElementById('account-logged-in'),
+  accountEmailDisplay: document.getElementById('account-email-display'),
+  chkLiveBeacon: document.getElementById('chk-live-beacon'),
+  beaconActiveInfo: document.getElementById('beacon-active-info'),
+  beaconIdVal: document.getElementById('beacon-id-val'),
+  btnCopyBeaconLink: document.getElementById('btn-copy-beacon-link'),
+  beaconViewerBanner: document.getElementById('beacon-viewer-banner'),
+  beaconViewerName: document.getElementById('beacon-viewer-name'),
+  btnCloseBeaconViewer: document.getElementById('btn-close-beacon-viewer'),
+
   guideDialog: document.getElementById('guide-dialog'),
   btnCloseGuide: document.getElementById('btn-close-guide'),
   toastContainer: document.getElementById('toast-container')
@@ -205,6 +230,12 @@ const el = {
 // --- API & Module Configuration Registry ---
 const API_REGISTRY = {
   // Category: Dashboard & Weer
+  'live_beacon': {
+    name: 'Live Deel-Beacon',
+    category: 'Dashboard & Weer',
+    description: 'Zendt je GPS-coördinaten live uit naar vrienden via Firebase.',
+    default: true
+  },
   'open_meteo': {
     name: 'Open-Meteo Weer',
     category: 'Dashboard & Weer',
@@ -429,6 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupSettingsDialog();
   setupNaturePanel();
   setupToolboxDialog();
+  initFirebase();
   
   // LocalStorage check for items
   loadSavedData();
@@ -606,6 +638,7 @@ function searchLocationAddress() {
 function setupSettingsDialog() {
   el.btnQuickSettings.addEventListener('click', () => {
     // Load current values
+    el.inputFirebaseConfig.value = localStorage.getItem('geoforge_firebase_config') || '';
     el.inputGeminiKey.value = localStorage.getItem('geoforge_gemini_key') || '';
     el.inputOrsKey.value = localStorage.getItem('geoforge_ors_key') || '';
     el.inputW3wKey.value = localStorage.getItem('geoforge_w3w_key') || '';
@@ -617,11 +650,18 @@ function setupSettingsDialog() {
   });
 
   el.btnSaveSettings.addEventListener('click', () => {
+    const configVal = el.inputFirebaseConfig.value.trim();
+    localStorage.setItem('geoforge_firebase_config', configVal);
     localStorage.setItem('geoforge_gemini_key', el.inputGeminiKey.value.trim());
     localStorage.setItem('geoforge_ors_key', el.inputOrsKey.value.trim());
     localStorage.setItem('geoforge_w3w_key', el.inputW3wKey.value.trim());
     el.settingsDialog.close();
     showToast('Instellingen opgeslagen.');
+    
+    if (configVal) {
+      initFirebase();
+    }
+    
     refreshLocalInfo();
   });
 }
@@ -852,6 +892,11 @@ function onLocationUpdate(position) {
 
   if (state.recordingState.isRecording && !state.recordingState.isPaused) {
     recordTrackPoint(lat, lng, altitude, position.timestamp);
+  }
+
+  // Live Location Beacon Broadcast
+  if (el.chkLiveBeacon && el.chkLiveBeacon.checked) {
+    updateLiveBeacon(lat, lng);
   }
 }
 
@@ -1085,10 +1130,18 @@ function renderSavedTracks() {
     });
     item.querySelector('.btn-delete-track').addEventListener('click', () => {
       if (confirm(`Weet je zeker dat je "${track.name}" wilt verwijderen?`)) {
+        const deletedId = track.id;
         state.savedTracks = state.savedTracks.filter(t => t.id !== track.id);
         saveTracksToLocalStorage();
         renderSavedTracks();
         showToast('Spoor verwijderd.');
+
+        // Delete from Firestore if logged in
+        if (db && auth && auth.currentUser) {
+          const uid = auth.currentUser.uid;
+          db.collection('users').doc(uid).collection('tracks').doc(deletedId).delete()
+            .catch(err => console.error("Error deleting track from cloud:", err));
+        }
       }
     });
 
@@ -1111,6 +1164,15 @@ function drawSavedTrackOnMap(track) {
 
 function saveTracksToLocalStorage() {
   localStorage.setItem('geoforge_tracks', JSON.stringify(state.savedTracks));
+
+  // Sync to Firestore Cloud if logged in
+  if (db && auth && auth.currentUser) {
+    const uid = auth.currentUser.uid;
+    state.savedTracks.forEach(track => {
+      db.collection('users').doc(uid).collection('tracks').doc(track.id).set(track)
+        .catch(err => console.error("Error syncing track to cloud:", err));
+    });
+  }
 }
 
 
@@ -2109,6 +2171,7 @@ function renderSavedWaypoints() {
     item.querySelector('.btn-view-wp').addEventListener('click', () => map.setView([wp.lat, wp.lng], 15));
     item.querySelector('.btn-delete-wp').addEventListener('click', () => {
       if (confirm(`Weet je zeker dat je waypoint "${wp.name}" wilt verwijderen?`)) {
+        const deletedId = wp.id;
         const mapMarkerObj = state.waypointMarkersMap.find(m => m.id === wp.id);
         if (mapMarkerObj) {
           map.removeLayer(mapMarkerObj.marker);
@@ -2118,6 +2181,13 @@ function renderSavedWaypoints() {
         saveWaypointsToLocalStorage();
         renderSavedWaypoints();
         showToast('Waypoint verwijderd.');
+
+        // Delete from Firestore if logged in
+        if (db && auth && auth.currentUser) {
+          const uid = auth.currentUser.uid;
+          db.collection('users').doc(uid).collection('waypoints').doc(deletedId).delete()
+            .catch(err => console.error("Error deleting waypoint from cloud:", err));
+        }
       }
     });
     el.savedWaypointsList.appendChild(item);
@@ -2126,6 +2196,15 @@ function renderSavedWaypoints() {
 
 function saveWaypointsToLocalStorage() {
   localStorage.setItem('geoforge_waypoints', JSON.stringify(state.savedWaypoints));
+
+  // Sync to Firestore Cloud if logged in
+  if (db && auth && auth.currentUser) {
+    const uid = auth.currentUser.uid;
+    state.savedWaypoints.forEach(wp => {
+      db.collection('users').doc(uid).collection('waypoints').doc(wp.id).set(wp)
+        .catch(err => console.error("Error syncing waypoint to cloud:", err));
+    });
+  }
 }
 
 
@@ -2604,4 +2683,319 @@ function renderToolboxCheckboxes() {
       el.toolboxModulesList.appendChild(wrapper);
     });
   });
+}
+
+// --- FIREBASE ACCOUNT SIGNUP, LOGIN & SYNC LOGIC ---
+let firebaseApp = null;
+let auth = null;
+let db = null;
+let beaconUnsubscribe = null;
+let tracksUnsubscribe = null;
+let waypointsUnsubscribe = null;
+
+function initFirebase() {
+  const configStr = localStorage.getItem('geoforge_firebase_config');
+  if (!configStr) {
+    console.log("Firebase config not found in localStorage. Running in local-only mode.");
+    return;
+  }
+
+  try {
+    const config = JSON.parse(configStr);
+    
+    if (!window.firebase || !firebase.apps) {
+      console.warn("Firebase SDK libraries not loaded yet. Skipping init.");
+      return;
+    }
+
+    if (!firebase.apps.length) {
+      firebaseApp = firebase.initializeApp(config);
+    } else {
+      firebaseApp = firebase.app();
+    }
+    
+    auth = firebase.auth();
+    db = firebase.firestore();
+
+    db.enablePersistence({ synchronizeTabs: true })
+      .then(() => console.log("Firestore offline persistence enabled."))
+      .catch(err => {
+        if (err.code == 'failed-precondition') {
+          console.warn("Persistence failed: multiple tabs open.");
+        } else if (err.code == 'unimplemented') {
+          console.warn("Persistence is not supported by this browser.");
+        }
+      });
+
+    setupFirebaseAccountListeners();
+    setupFirebaseBeaconReceiver();
+  } catch (e) {
+    console.error("Failed to parse or initialize Firebase:", e);
+    showToast("Fout bij laden Firebase-configuratie. Controleer de JSON.", "error");
+  }
+}
+
+function setupFirebaseAccountListeners() {
+  if (el.btnAuthRegister && !el.btnAuthRegister.hasAttribute('data-bound')) {
+    el.btnAuthRegister.setAttribute('data-bound', 'true');
+    el.btnAuthRegister.addEventListener('click', () => {
+      const email = el.inputAuthEmail.value.trim();
+      const password = el.inputAuthPassword.value.trim();
+      if (!email || password.length < 6) {
+        showToast("Vul een geldig e-mailadres in en een wachtwoord van minimaal 6 tekens.", "warning");
+        return;
+      }
+      auth.createUserWithEmailAndPassword(email, password)
+        .then(() => showToast("Account succesvol aangemaakt!"))
+        .catch(err => {
+          console.error(err);
+          showToast("Registratie mislukt: " + err.message, "error");
+        });
+    });
+  }
+
+  if (el.btnAuthLogin && !el.btnAuthLogin.hasAttribute('data-bound')) {
+    el.btnAuthLogin.setAttribute('data-bound', 'true');
+    el.btnAuthLogin.addEventListener('click', () => {
+      const email = el.inputAuthEmail.value.trim();
+      const password = el.inputAuthPassword.value.trim();
+      if (!email || !password) {
+        showToast("Vul e-mailadres en wachtwoord in.", "warning");
+        return;
+      }
+      auth.signInWithEmailAndPassword(email, password)
+        .then(() => showToast("Succesvol aangemeld!"))
+        .catch(err => {
+          console.error(err);
+          showToast("Aanmelden mislukt: " + err.message, "error");
+        });
+    });
+  }
+
+  if (el.btnAuthLogout && !el.btnAuthLogout.hasAttribute('data-bound')) {
+    el.btnAuthLogout.setAttribute('data-bound', 'true');
+    el.btnAuthLogout.addEventListener('click', () => {
+      auth.signOut()
+        .then(() => {
+          showToast("Uitgelogd. Lokale weergave hersteld.");
+          if (tracksUnsubscribe) tracksUnsubscribe();
+          if (waypointsUnsubscribe) waypointsUnsubscribe();
+        })
+        .catch(err => showToast("Uitloggen mislukt.", "error"));
+    });
+  }
+
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      if (el.accountLoggedOut) el.accountLoggedOut.classList.add('hidden');
+      if (el.accountLoggedIn) el.accountLoggedIn.classList.remove('hidden');
+      if (el.accountEmailDisplay) el.accountEmailDisplay.textContent = user.email;
+
+      syncTracksFromFirestore(user.uid);
+      syncWaypointsFromFirestore(user.uid);
+      migrateLocalStorageToCloud(user.uid);
+    } else {
+      if (el.accountLoggedOut) el.accountLoggedOut.classList.remove('hidden');
+      if (el.accountLoggedIn) el.accountLoggedIn.classList.add('hidden');
+      if (el.accountEmailDisplay) el.accountEmailDisplay.textContent = '...';
+    }
+  });
+
+  if (el.chkLiveBeacon && !el.chkLiveBeacon.hasAttribute('data-bound')) {
+    el.chkLiveBeacon.setAttribute('data-bound', 'true');
+    el.chkLiveBeacon.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        if (!db) {
+          showToast("Firebase Config is vereist om de beacon te gebruiken.", "warning");
+          e.target.checked = false;
+          return;
+        }
+        state.beaconId = state.beaconId || 'beacon_' + Math.random().toString(36).substring(2, 10);
+        el.beaconIdVal.textContent = state.beaconId;
+        el.beaconActiveInfo.classList.remove('hidden');
+        showToast("Live Deel-Beacon geactiveerd.");
+      } else {
+        el.beaconActiveInfo.classList.add('hidden');
+        showToast("Beacon uitgeschakeld.");
+        
+        if (db && state.beaconId) {
+          db.collection('shared_tracks').doc(state.beaconId).delete()
+            .catch(err => console.error("Error clearing beacon:", err));
+        }
+        state.beaconId = null;
+      }
+    });
+  }
+
+  if (el.btnCopyBeaconLink && !el.btnCopyBeaconLink.hasAttribute('data-bound')) {
+    el.btnCopyBeaconLink.setAttribute('data-bound', 'true');
+    el.btnCopyBeaconLink.addEventListener('click', () => {
+      if (state.beaconId) {
+        const link = window.location.origin + window.location.pathname + '?share=' + state.beaconId;
+        navigator.clipboard.writeText(link)
+          .then(() => showToast("Deellink gekopieerd!"))
+          .catch(() => showToast("Kopiëren mislukt.", "error"));
+      }
+    });
+  }
+}
+
+function syncTracksFromFirestore(uid) {
+  if (!db) return;
+  
+  tracksUnsubscribe = db.collection('users').doc(uid).collection('tracks')
+    .onSnapshot(snapshot => {
+      const cloudTracks = [];
+      snapshot.forEach(doc => {
+        cloudTracks.push(doc.data());
+      });
+
+      if (cloudTracks.length > 0) {
+        state.savedTracks = cloudTracks;
+        localStorage.setItem('geoforge_tracks', JSON.stringify(state.savedTracks));
+        renderSavedTracks();
+      }
+    }, err => console.error("Firestore sync tracks failed:", err));
+}
+
+function syncWaypointsFromFirestore(uid) {
+  if (!db) return;
+
+  waypointsUnsubscribe = db.collection('users').doc(uid).collection('waypoints')
+    .onSnapshot(snapshot => {
+      const cloudWps = [];
+      snapshot.forEach(doc => {
+        cloudWps.push(doc.data());
+      });
+
+      if (cloudWps.length > 0) {
+        state.savedWaypoints = cloudWps;
+        localStorage.setItem('geoforge_waypoints', JSON.stringify(state.savedWaypoints));
+        renderSavedWaypoints();
+
+        state.waypointMarkersMap.forEach(m => map.removeLayer(m.marker));
+        state.waypointMarkersMap = [];
+        state.savedWaypoints.forEach(wp => drawWaypointMarker(wp));
+      }
+    }, err => console.error("Firestore sync waypoints failed:", err));
+}
+
+function migrateLocalStorageToCloud(uid) {
+  const localTracksJson = localStorage.getItem('geoforge_tracks');
+  if (localTracksJson) {
+    try {
+      const localTracks = JSON.parse(localTracksJson);
+      localTracks.forEach(track => {
+        db.collection('users').doc(uid).collection('tracks').doc(track.id).set(track)
+          .catch(err => console.error("Error migrating local track:", err));
+      });
+    } catch(e) {}
+  }
+
+  const localWpsJson = localStorage.getItem('geoforge_waypoints');
+  if (localWpsJson) {
+    try {
+      const localWps = JSON.parse(localWpsJson);
+      localWps.forEach(wp => {
+        db.collection('users').doc(uid).collection('waypoints').doc(wp.id).set(wp)
+          .catch(err => console.error("Error migrating local waypoint:", err));
+      });
+    } catch(e) {}
+  }
+}
+
+// --- REALTIME DEEL-BEACON SENDER & RECEIVER ---
+function updateLiveBeacon(lat, lng) {
+  if (!db || !state.beaconId || !isApiEnabled('live_beacon')) return;
+
+  const now = Date.now();
+  if (state.lastBeaconUpdateTime && (now - state.lastBeaconUpdateTime < 10000)) return;
+  state.lastBeaconUpdateTime = now;
+
+  const currentPath = state.recordingState.isRecording ? state.recordingState.points : [];
+
+  db.collection('shared_tracks').doc(state.beaconId).set({
+    id: state.beaconId,
+    lat: lat,
+    lng: lng,
+    speed: state.recordingState.speed || 0,
+    bearing: state.deviceHeading || 0,
+    elevation: state.recordingState.elevation || 0,
+    path: currentPath,
+    lastActive: firebase.firestore.FieldValue.serverTimestamp()
+  })
+  .then(() => console.log("Beacon sent successfully"))
+  .catch(err => console.error("Failed to update beacon:", err));
+}
+
+function setupFirebaseBeaconReceiver() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const shareId = urlParams.get('share');
+  if (!shareId) return;
+
+  el.beaconViewerBanner.classList.remove('hidden');
+  el.beaconViewerName.textContent = shareId;
+
+  const beaconIcon = L.divIcon({
+    className: 'user-location-wrapper beacon-tracking-wrapper',
+    html: `<div class="pulse-ring" style="border-color:#00f3ff; background:rgba(0,243,255,0.2);"></div><div class="user-dot" style="background-color:#00f3ff;"></div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
+  });
+
+  state.beaconMarker = L.marker([0, 0], { icon: beaconIcon }).addTo(map);
+  state.beaconPolyline = L.polyline([], {
+    color: '#00f3ff',
+    weight: 4,
+    opacity: 0.8,
+    dashArray: '5, 5'
+  }).addTo(map);
+
+  if (el.btnCloseBeaconViewer && !el.btnCloseBeaconViewer.hasAttribute('data-bound')) {
+    el.btnCloseBeaconViewer.setAttribute('data-bound', 'true');
+    el.btnCloseBeaconViewer.addEventListener('click', () => {
+      stopViewingLiveBeacon();
+    });
+  }
+
+  showToast("Live positievolgen gestart...");
+
+  beaconUnsubscribe = db.collection('shared_tracks').doc(shareId)
+    .onSnapshot(doc => {
+      if (doc.exists) {
+        const data = doc.data();
+        const latlng = L.latLng(data.lat, data.lng);
+
+        state.beaconMarker.setLatLng(latlng);
+
+        if (data.path && data.path.length > 0) {
+          const coords = data.path.map(p => L.latLng(p.lat, p.lng));
+          state.beaconPolyline.setLatLngs(coords);
+        }
+
+        if (!state.beaconCentered) {
+          map.setView(latlng, 15);
+          state.beaconCentered = true;
+        }
+
+        el.beaconViewerName.textContent = `${shareId} (${data.speed.toFixed(1)} km/u)`;
+      } else {
+        showToast("Beacon is momenteel niet actief of is offline gehaald.", "warning");
+      }
+    }, err => {
+      console.error(err);
+      showToast("Fout bij laden live positiegegevens.", "error");
+    });
+}
+
+function stopViewingLiveBeacon() {
+  if (beaconUnsubscribe) beaconUnsubscribe();
+  if (state.beaconMarker) map.removeLayer(state.beaconMarker);
+  if (state.beaconPolyline) map.removeLayer(state.beaconPolyline);
+  
+  el.beaconViewerBanner.classList.add('hidden');
+  
+  const newUrl = window.location.origin + window.location.pathname;
+  window.history.replaceState({}, document.title, newUrl);
+  showToast("Live volgen gestopt.");
 }
