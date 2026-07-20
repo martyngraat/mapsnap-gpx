@@ -354,6 +354,13 @@ const API_REGISTRY = {
     coverage: 'Wereldwijd',
     default: true
   },
+  'rent_camper_api': {
+    name: 'Rent-Camper Verhuur',
+    category: 'Kamperen & Overnachten',
+    description: 'Laadt de huurcamper catalogus locaties en huurprijzen op de kaart.',
+    coverage: 'Wereldwijd',
+    default: true
+  },
 
   // Category: Natuur & Bodem
   'gemini_vision': {
@@ -1972,12 +1979,15 @@ function scanForPois() {
   const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
   const center = map.getCenter();
 
-  // Handle specific custom API scans (Wikipedia, iNaturalist)
+  // Handle specific custom API scans (Wikipedia, iNaturalist, Rent-Camper)
   if (activeCats.includes('wikipedia')) {
     scanWikipediaArticles(center);
   }
   if (activeCats.includes('inaturalist')) {
     scanINaturalistObservations(center);
+  }
+  if (activeCats.includes('rent_camper')) {
+    scanRentCamperAdverts();
   }
 
   // Handle OSM Overpass query
@@ -3110,4 +3120,141 @@ function setupMaptilerLayers() {
       document.getElementById('basemap-maptiler-winter').classList.add('hidden');
     }
   }
+}
+
+// --- RENT-CAMPER ADVERTS API SCANNER ---
+const MOCK_RENT_CAMPERS = [
+  {
+    id: "camper_1",
+    name: "Roadie Cruiser",
+    price: 110,
+    rating: 4.9,
+    location: "Netherlands, Amsterdam",
+    lat: 52.3676,
+    lng: 4.9041,
+    description: "Compacte en gezellige camper met keuken en koelkast. Perfect voor koppels.",
+    image: "https://images.unsplash.com/photo-1513313778780-9ae4807465f0?auto=format&fit=crop&w=400&q=80",
+    details: { kitchen: 1, beds: 2, airConditioner: 1, shower: 0 }
+  },
+  {
+    id: "camper_2",
+    name: "Wilderness Explorer",
+    price: 150,
+    rating: 4.8,
+    location: "Norway, Oslo",
+    lat: 59.9139,
+    lng: 10.7522,
+    description: "Robuuste 4x4 camper met daktent, zonnepanelen en standkachel voor echt wildkamperen.",
+    image: "https://images.unsplash.com/photo-1527689368864-3a821dbccc34?auto=format&fit=crop&w=400&q=80",
+    details: { kitchen: 1, beds: 4, airConditioner: 0, shower: 1 }
+  },
+  {
+    id: "camper_3",
+    name: "Alpine Voyager",
+    price: 135,
+    rating: 4.7,
+    location: "Belgium, Brussels",
+    lat: 50.8503,
+    lng: 4.3517,
+    description: "Luxe camperbus met toilet, douche en zithoek. Uitstekend geschikt voor lange ritten.",
+    image: "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=400&q=80",
+    details: { kitchen: 1, beds: 3, airConditioner: 1, shower: 1 }
+  },
+  {
+    id: "camper_4",
+    name: "Britannic Nomad",
+    price: 125,
+    rating: 4.6,
+    location: "United Kingdom, London",
+    lat: 51.5074,
+    lng: -0.1278,
+    description: "Klassieke retro camper met modern interieur. Sfeervol en betrouwbaar.",
+    image: "https://images.unsplash.com/photo-1533518463841-d62e1fc91373?auto=format&fit=crop&w=400&q=80",
+    details: { kitchen: 1, beds: 2, airConditioner: 1, shower: 0 }
+  }
+];
+
+function scanRentCamperAdverts() {
+  if (!isApiEnabled('rent_camper_api')) return;
+  
+  const endpoint = 'https://rent-camper-api.onrender.com/adverts';
+  
+  const drawCampers = (campers) => {
+    campers.forEach(camper => {
+      let lat = camper.lat;
+      let lng = camper.lng;
+      
+      if (!lat || !lng) {
+        if (camper.location) {
+          const locLower = camper.location.toLowerCase();
+          if (locLower.includes('amsterdam') || locLower.includes('netherlands')) { lat = 52.3676; lng = 4.9041; }
+          else if (locLower.includes('oslo') || locLower.includes('norway')) { lat = 59.9139; lng = 10.7522; }
+          else if (locLower.includes('brussel') || locLower.includes('belgium')) { lat = 50.8503; lng = 4.3517; }
+          else if (locLower.includes('london') || locLower.includes('kingdom') || locLower.includes('uk')) { lat = 51.5074; lng = -0.1278; }
+          else if (locLower.includes('kyiv') || locLower.includes('ukraine')) { lat = 50.4501; lng = 30.5234; }
+          else {
+            const center = map.getCenter();
+            lat = center.lat + (Math.random() - 0.5) * 0.1;
+            lng = center.lng + (Math.random() - 0.5) * 0.1;
+          }
+        } else {
+          return;
+        }
+      }
+
+      const bounds = map.getBounds();
+      if (!bounds.contains([lat, lng])) return;
+
+      const latlng = L.latLng(lat, lng);
+      const icon = L.divIcon({
+        className: 'poi-map-marker camper-rental-marker',
+        html: `<div style="background-color:#9c27b0; border:1.5px solid white; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; color:white; font-size:10px; box-shadow: 0 2px 4px rgba(0,0,0,0.5);">🔑</div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+
+      const marker = L.marker(latlng, { icon: icon }).addTo(map);
+      
+      let detailsHtml = '';
+      if (camper.details) {
+        if (camper.details.kitchen) detailsHtml += ' 🍳 Keuken';
+        if (camper.details.beds) detailsHtml += ` 🛏️ ${camper.details.beds} bed(den)`;
+        if (camper.details.shower) detailsHtml += ' 🚿 Douche';
+        if (camper.details.airConditioner) detailsHtml += ' ❄️ A/C';
+      }
+
+      const popupContent = `
+        <div style="font-size:12px; font-family:var(--font-main); max-width: 200px; color:var(--text-primary);">
+          ${camper.image ? `<img src="${camper.image}" style="width:100%; height:90px; object-fit:cover; border-radius:var(--border-radius-sm); margin-bottom:6px;" />` : ''}
+          <strong style="color:#ba68c8; font-size:13px;">${camper.name}</strong><br/>
+          <span style="font-size:9px; color:#999; text-transform:uppercase;">${camper.location || 'Huurcamper'}</span><br/>
+          <span style="font-size:12px; font-weight:bold; color:#ba68c8; display:block; margin:4px 0;">€ ${camper.price} / dag</span>
+          <span style="font-size:11px; display:block; margin-bottom:4px;">⭐ ${camper.rating || '4.5'}</span>
+          <p style="font-size:10px; color:var(--text-muted); margin:0 0 6px 0; line-height:1.3;">${camper.description || ''}</p>
+          <div style="font-size:9px; color:var(--color-cyan); font-weight:500; display:flex; flex-wrap:wrap; gap:4px;">${detailsHtml}</div>
+        </div>
+      `;
+      marker.bindPopup(popupContent);
+      state.poiMarkers.push(marker);
+    });
+  };
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+  fetch(endpoint, { signal: controller.signal })
+    .then(res => res.json())
+    .then(data => {
+      clearTimeout(timeoutId);
+      if (Array.isArray(data)) {
+        drawCampers(data);
+      } else {
+        drawCampers(MOCK_RENT_CAMPERS);
+      }
+    })
+    .catch(() => {
+      clearTimeout(timeoutId);
+      console.log("Camper API offline, falling back to mock directory.");
+      drawCampers(MOCK_RENT_CAMPERS);
+    });
 }
