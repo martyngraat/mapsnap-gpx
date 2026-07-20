@@ -225,7 +225,8 @@ const el = {
 
   guideDialog: document.getElementById('guide-dialog'),
   btnCloseGuide: document.getElementById('btn-close-guide'),
-  toastContainer: document.getElementById('toast-container')
+  toastContainer: document.getElementById('toast-container'),
+  btnOpenMapillary: document.getElementById('btn-open-mapillary')
 };
 
 // --- API & Module Configuration Registry ---
@@ -354,6 +355,13 @@ const API_REGISTRY = {
     coverage: 'Wereldwijd',
     default: true
   },
+  'active_campsites': {
+    name: 'Active Campsite Search',
+    category: 'Kamperen & Overnachten',
+    description: 'Scant op campings en caravanplaatsen (voornamelijk Noord-Amerika).',
+    coverage: 'Noord-Amerika',
+    default: false
+  },
   'rent_camper_api': {
     name: 'Rent-Camper Verhuur',
     category: 'Kamperen & Overnachten',
@@ -393,6 +401,20 @@ const API_REGISTRY = {
   },
 
   // Category: POI & Route
+  'vlaanderen_tourism': {
+    name: 'Toerisme Vlaanderen POIs',
+    category: 'POI & Route',
+    description: 'Scant op bezienswaardigheden en toeristische hotspots in Vlaanderen.',
+    coverage: 'Vlaanderen',
+    default: true
+  },
+  'mapillary': {
+    name: 'Mapillary Straatbeeld',
+    category: 'POI & Route',
+    description: 'Opent straatniveau omgevingsfoto\'s rondom het kaartcenter.',
+    coverage: 'Wereldwijd',
+    default: true
+  },
   'wikipedia_poi': {
     name: 'Wikipedia Geosearch POIs',
     category: 'POI & Route',
@@ -1945,6 +1967,18 @@ function setupPoiExplorer() {
   el.btnPoiScan.addEventListener('click', scanForPois);
   el.btnPoiRefresh.addEventListener('click', scanForPois);
 
+  if (el.btnOpenMapillary) {
+    el.btnOpenMapillary.addEventListener('click', () => {
+      if (!isApiEnabled('mapillary')) {
+        showToast('Mapillary-module is uitgeschakeld in de API Toolbox.', 'warning');
+        return;
+      }
+      const center = map.getCenter();
+      const url = `https://www.mapillary.com/app/?lat=${center.lat}&lng=${center.lng}&z=17`;
+      window.open(url, '_blank');
+    });
+  }
+
   el.btnAddWaypoint.addEventListener('click', () => {
     const center = map.getCenter();
     const wpName = prompt('Voer een naam in voor dit Waypoint:', `Waypoint ${state.savedWaypoints.length + 1}`);
@@ -2002,8 +2036,14 @@ function scanForPois() {
     if (cat === 'opencampingmap') {
       subqueries += `node["tourism"="camp_site"](${bbox});node["tourism"="caravan_site"](${bbox});way["tourism"="camp_site"](${bbox});way["tourism"="caravan_site"](${bbox});`;
     }
+    if (cat === 'active_campsites') {
+      subqueries += `node["tourism"="camp_site"](${bbox});node["tourism"="caravan_site"](${bbox});way["tourism"="camp_site"](${bbox});way["tourism"="caravan_site"](${bbox});`;
+    }
     if (cat === 'vanstops') {
       subqueries += `node["tourism"="caravan_site"](${bbox});way["tourism"="caravan_site"](${bbox});node["caravan_site"="yes"](${bbox});`;
+    }
+    if (cat === 'vlaanderen_tourism') {
+      subqueries += `node["historic"](${bbox});node["tourism"="museum"](${bbox});node["tourism"="attraction"](${bbox});node["historic"="castle"](${bbox});way["historic"="castle"](${bbox});`;
     }
     if (cat === 'viewpoint') {
       subqueries += `node["tourism"="viewpoint"](${bbox});node["natural"="peak"](${bbox});node["natural"="tree"]["denotation"="monument"](${bbox});node["natural"="tree"]["monument"="yes"](${bbox});`;
