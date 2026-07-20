@@ -339,6 +339,22 @@ const API_REGISTRY = {
     default: true
   },
 
+  // Category: Kamperen & Overnachten
+  'vanstops_uk': {
+    name: 'VanStops UK Camperplaatsen',
+    category: 'Kamperen & Overnachten',
+    description: 'Scant en filtert op openbare camperplaatsen en pub stopovers in het VK.',
+    coverage: 'Verenigd Koninkrijk',
+    default: true
+  },
+  'opencampingmap': {
+    name: 'OpenCampingMap Camper & Caravans',
+    category: 'Kamperen & Overnachten',
+    description: 'Laadt kampeer- en camperlocaties wereldwijd via OpenStreetMap.',
+    coverage: 'Wereldwijd',
+    default: true
+  },
+
   // Category: Natuur & Bodem
   'gemini_vision': {
     name: 'Gemini AI Vision Soorten Scanner',
@@ -1973,6 +1989,12 @@ function scanForPois() {
     if (cat === 'camp_site') {
       subqueries += `node["tourism"="camp_site"](${bbox});node["tourism"="caravan_site"](${bbox});node["backcountry"="yes"](${bbox});`;
     }
+    if (cat === 'opencampingmap') {
+      subqueries += `node["tourism"="camp_site"](${bbox});node["tourism"="caravan_site"](${bbox});way["tourism"="camp_site"](${bbox});way["tourism"="caravan_site"](${bbox});`;
+    }
+    if (cat === 'vanstops') {
+      subqueries += `node["tourism"="caravan_site"](${bbox});way["tourism"="caravan_site"](${bbox});node["caravan_site"="yes"](${bbox});`;
+    }
     if (cat === 'viewpoint') {
       subqueries += `node["tourism"="viewpoint"](${bbox});node["natural"="peak"](${bbox});node["natural"="tree"]["denotation"="monument"](${bbox});node["natural"="tree"]["monument"="yes"](${bbox});`;
     }
@@ -1994,7 +2016,7 @@ function scanForPois() {
     (
       ${subqueries}
     );
-    out body;`;
+    out center;`;
 
   el.poiStatusLog.textContent = 'OpenStreetMap bevragen...';
 
@@ -2011,9 +2033,11 @@ function scanForPois() {
       if (!data.elements || data.elements.length === 0) return;
 
       data.elements.forEach(poi => {
-        if (!poi.lat || !poi.lon) return;
+        const lat = poi.lat || (poi.center && poi.center.lat);
+        const lng = poi.lon || (poi.center && poi.center.lng);
+        if (!lat || !lng) return;
 
-        const latlng = L.latLng(poi.lat, poi.lon);
+        const latlng = L.latLng(lat, lng);
         const tags = poi.tags || {};
         const name = tags.name || tags.operator || getPoiFallbackName(poi);
         const cat = getPoiCategory(poi);
@@ -2135,6 +2159,7 @@ function getPoiFallbackName(poi) {
 function getPoiCategory(poi) {
   const tags = poi.tags || {};
   if (tags.amenity === 'drinking_water' || tags.man_made === 'water_well') return 'drinking_water';
+  if (tags.tourism === 'caravan_site' || tags.caravan_site === 'yes') return 'camper_site';
   if (tags.tourism === 'camp_site' || tags.backcountry === 'yes') return 'camp_site';
   if (tags.tourism === 'viewpoint' || tags.natural === 'peak') return 'viewpoint';
   if (tags.natural === 'tree' && (tags.denotation === 'monument' || tags.monument === 'yes' || tags.heritage === 'yes')) return 'monument_tree';
@@ -2146,8 +2171,9 @@ function getPoiMarkerColor(cat) {
   const colors = {
     drinking_water: '#00f3ff',
     camp_site: '#00ff66',
+    camper_site: '#ffb74d',
     viewpoint: '#ffaa00',
-    monument_tree: '#00ff66',
+    monument_tree: '#81c784',
     emergency: '#ff3366'
   };
   return colors[cat] || '#ffffff';
@@ -2157,6 +2183,7 @@ function getPoiMarkerSymbol(cat) {
   const symbols = {
     drinking_water: '💧',
     camp_site: '⛺',
+    camper_site: '🚐',
     viewpoint: '🔭',
     monument_tree: '🌳',
     emergency: '🚨'
