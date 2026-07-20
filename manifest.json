@@ -1,11 +1,11 @@
 {
-  "name": "MapSnap GPX",
-  "short_name": "MapSnap",
-  "description": "Zet gefotografeerde routekaarten om in GPX-bestanden gesnapt op echte paden.",
+  "name": "GeoForge Navigator",
+  "short_name": "GeoForge",
+  "description": "Superstrakke technische GPS app voor buiten. Plannen via paden, meten met een latje, POIs en historische kaarten.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#111827",
-  "theme_color": "#10b981",
+  "background_color": "#050608",
+  "theme_color": "#0a0b0e",
   "orientation": "any",
   "icons": [
     {
