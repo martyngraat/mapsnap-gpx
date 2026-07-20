@@ -196,6 +196,7 @@ const el = {
   inputGeminiKey: document.getElementById('input-gemini-key'),
   inputOrsKey: document.getElementById('input-ors-key'),
   inputW3wKey: document.getElementById('input-w3w-key'),
+  inputMaptilerKey: document.getElementById('input-maptiler-key'),
   btnSaveSettings: document.getElementById('btn-save-settings'),
   btnCloseSettingsDialog: document.getElementById('btn-close-settings-dialog'),
   btnOpenToolbox: document.getElementById('btn-open-toolbox'),
@@ -278,6 +279,12 @@ const API_REGISTRY = {
     name: 'Noorwegen Topo (Kartverket)',
     category: 'Kaart Overlays',
     description: 'Laadt de officiële topografische kaart van Noorwegen.',
+    default: true
+  },
+  'maptiler_maps': {
+    name: 'MapTiler Basiskaarten',
+    category: 'Kaart Overlays',
+    description: 'Schakelt MapTiler Outdoor- en Winterkaarten in (gratis API-sleutel vereist).',
     default: true
   },
   'rainviewer': {
@@ -472,6 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupNaturePanel();
   setupToolboxDialog();
   initFirebase();
+  setupMaptilerLayers();
   
   // LocalStorage check for items
   loadSavedData();
@@ -653,6 +661,7 @@ function setupSettingsDialog() {
     el.inputGeminiKey.value = localStorage.getItem('geoforge_gemini_key') || '';
     el.inputOrsKey.value = localStorage.getItem('geoforge_ors_key') || '';
     el.inputW3wKey.value = localStorage.getItem('geoforge_w3w_key') || '';
+    el.inputMaptilerKey.value = localStorage.getItem('geoforge_maptiler_key') || '';
     el.settingsDialog.showModal();
   });
 
@@ -666,6 +675,7 @@ function setupSettingsDialog() {
     localStorage.setItem('geoforge_gemini_key', el.inputGeminiKey.value.trim());
     localStorage.setItem('geoforge_ors_key', el.inputOrsKey.value.trim());
     localStorage.setItem('geoforge_w3w_key', el.inputW3wKey.value.trim());
+    localStorage.setItem('geoforge_maptiler_key', el.inputMaptilerKey.value.trim());
     el.settingsDialog.close();
     showToast('Instellingen opgeslagen.');
     
@@ -673,6 +683,7 @@ function setupSettingsDialog() {
       initFirebase();
     }
     
+    setupMaptilerLayers();
     refreshLocalInfo();
   });
 }
@@ -2612,6 +2623,8 @@ function applyApiVisibility() {
       }
     }
   });
+
+  setupMaptilerLayers();
 }
 
 function setupToolboxDialog() {
@@ -3009,4 +3022,39 @@ function stopViewingLiveBeacon() {
   const newUrl = window.location.origin + window.location.pathname;
   window.history.replaceState({}, document.title, newUrl);
   showToast("Live volgen gestopt.");
+}
+
+// --- MAPTILER DYNAMIC LAYERS LOADING ---
+function setupMaptilerLayers() {
+  const maptilerKey = localStorage.getItem('geoforge_maptiler_key');
+  const enabled = isApiEnabled('maptiler_maps');
+
+  if (maptilerKey && enabled) {
+    if (!state.baseLayers.maptileroutdoor) {
+      state.baseLayers.maptileroutdoor = L.tileLayer(`https://api.maptiler.com/maps/outdoor/256/{z}/{x}/{y}.png?key=${maptilerKey}`, {
+        maxZoom: 20,
+        attribution: '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+      });
+    }
+    if (!state.baseLayers.maptilerwinter) {
+      state.baseLayers.maptilerwinter = L.tileLayer(`https://api.maptiler.com/maps/winter/256/{z}/{x}/{y}.png?key=${maptilerKey}`, {
+        maxZoom: 20,
+        attribution: '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+      });
+    }
+
+    if (document.getElementById('basemap-maptiler-outdoor')) {
+      document.getElementById('basemap-maptiler-outdoor').classList.remove('hidden');
+    }
+    if (document.getElementById('basemap-maptiler-winter')) {
+      document.getElementById('basemap-maptiler-winter').classList.remove('hidden');
+    }
+  } else {
+    if (document.getElementById('basemap-maptiler-outdoor')) {
+      document.getElementById('basemap-maptiler-outdoor').classList.add('hidden');
+    }
+    if (document.getElementById('basemap-maptiler-winter')) {
+      document.getElementById('basemap-maptiler-winter').classList.add('hidden');
+    }
+  }
 }
