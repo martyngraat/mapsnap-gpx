@@ -293,9 +293,9 @@ const API_REGISTRY = {
     default: true
   },
   'natura2000': {
-    name: 'Natura 2000 Gebieden (PDOK)',
+    name: 'Natura 2000 Natuurbescherming (EU)',
     category: 'Kaart Overlays',
-    description: 'Toont de begrenzingen van Natura 2000 natuurgebieden in NL.',
+    description: 'Toont de begrenzingen van Natura 2000 beschermde natuurgebieden in Europa.',
     default: true
   },
   'rijksmonumenten': {
