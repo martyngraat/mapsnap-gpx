@@ -560,9 +560,17 @@
                 <input type="checkbox" class="poi-cat-chk" value="vanstops" />
                 <span class="chk-label">🚐 VanStops UK (Camper)</span>
               </label>
+              <label class="poi-filter-checkbox api-module-ui" data-api="active_campsites">
+                <input type="checkbox" class="poi-cat-chk" value="active_campsites" />
+                <span class="chk-label">🔑 Active Campsites (US/CA)</span>
+              </label>
               <label class="poi-filter-checkbox api-module-ui" data-api="rent_camper_api">
                 <input type="checkbox" class="poi-cat-chk" value="rent_camper" />
                 <span class="chk-label">🔑 Rent-Camper Verhuur</span>
+              </label>
+              <label class="poi-filter-checkbox api-module-ui" data-api="vlaanderen_tourism">
+                <input type="checkbox" class="poi-cat-chk" value="vlaanderen_tourism" />
+                <span class="chk-label">🏰 Toerisme Vlaanderen</span>
               </label>
               <label class="poi-filter-checkbox">
                 <input type="checkbox" class="poi-cat-chk" value="viewpoint" checked />
@@ -591,6 +599,15 @@
             </button>
             <div id="poi-status-log" class="help-text" style="display:none; text-align:center; color: var(--color-primary); font-weight: 500;">
               Overpass API doorzoeken...
+            </div>
+
+            <!-- Mapillary Street-Level Imagery Section -->
+            <div class="drawer-section api-module-ui" data-api="mapillary" style="margin-top:15px; border-top:1px solid var(--border-color); padding-top:15px;">
+              <h3 class="section-title">📷 Straatbeeld & Foto's</h3>
+              <p class="panel-desc">Bekijk straatfoto's en omgevingsbeelden rondom het kaartcenter op Mapillary.</p>
+              <button id="btn-open-mapillary" class="btn btn-secondary btn-full">
+                👁️ Open Mapillary Straatbeeld
+              </button>
             </div>
           </div>
 
