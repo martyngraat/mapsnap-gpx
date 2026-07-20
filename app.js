@@ -533,6 +533,14 @@ function initMap() {
   map.on('click', onMapClick);
 }
 
+function onMapClick(e) {
+  if (state.activeMode === 'planner') {
+    addPlannerPoint(e.latlng);
+  } else if (state.activeMode === 'measure') {
+    addMeasurePoint(e.latlng);
+  }
+}
+
 // --- Initialize App ---
 document.addEventListener('DOMContentLoaded', () => {
   try {
