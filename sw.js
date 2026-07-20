@@ -1,4 +1,4 @@
-const CACHE_NAME = 'geoforge-v17';
+const CACHE_NAME = 'geoforge-v18';
 const ASSETS = [
   './',
   './index.html',
@@ -46,6 +46,29 @@ self.addEventListener('fetch', (e) => {
     return;
   }
   
+  // Network-first for HTML document navigation requests to avoid caching traps
+  const isHtml = e.request.mode === 'navigate' || 
+                 e.request.url.endsWith('index.html') || 
+                 e.request.url === self.location.origin + '/' || 
+                 e.request.url.replace(/\/$/, '') === self.location.origin + '/mapsnap-gpx';
+
+  if (isHtml) {
+    e.respondWith(
+      fetch(e.request).then((networkResponse) => {
+        if (networkResponse.status === 200) {
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(e.request, networkResponse.clone());
+          });
+        }
+        return networkResponse;
+      }).catch(() => {
+        return caches.match(e.request);
+      })
+    );
+    return;
+  }
+  
+  // Cache-first for other local assets (js, css, images)
   e.respondWith(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.match(e.request).then((cachedResponse) => {
