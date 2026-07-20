@@ -235,42 +235,49 @@ const API_REGISTRY = {
     name: 'Live Deel-Beacon',
     category: 'Dashboard & Weer',
     description: 'Zendt je GPS-coördinaten live uit naar vrienden via Firebase.',
+    coverage: 'Wereldwijd',
     default: true
   },
   'open_meteo': {
     name: 'Open-Meteo Weer',
     category: 'Dashboard & Weer',
     description: 'Laadt actuele weersinformatie en temperaturen op je huidige locatie.',
+    coverage: 'Wereldwijd',
     default: true
   },
   'sunrise_sunset': {
     name: 'Sunrise-Sunset Tijden',
     category: 'Dashboard & Weer',
     description: 'Berekent zonsopgang- en ondergangstijden.',
+    coverage: 'Wereldwijd',
     default: true
   },
   'waqi': {
     name: 'WAQI Luchtkwaliteit',
     category: 'Dashboard & Weer',
     description: 'Laadt live luchtkwaliteit van lokale meetstations.',
+    coverage: 'Wereldwijd',
     default: true
   },
   'plus_codes': {
     name: 'Google Plus Codes',
     category: 'Dashboard & Weer',
     description: 'Berekent een korte noodcode voor reddingsdiensten.',
+    coverage: 'Wereldwijd',
     default: true
   },
   'usgs_elevation': {
     name: 'USGS/Open-Elevation Correctie',
     category: 'Dashboard & Weer',
     description: 'Verifieert GPS-hoogte aan de hand van hoogtemodellen.',
+    coverage: 'Wereldwijd',
     default: true
   },
   'what3words': {
     name: 'what3words Noodadres',
     category: 'Dashboard & Weer',
     description: 'Vertaalt je coördinaten naar een 3-woorden adres.',
+    coverage: 'Wereldwijd',
     default: false
   },
   
@@ -279,48 +286,56 @@ const API_REGISTRY = {
     name: 'Noorwegen Topo (Kartverket)',
     category: 'Kaart Overlays',
     description: 'Laadt de officiële topografische kaart van Noorwegen.',
+    coverage: 'Noorwegen',
     default: true
   },
   'maptiler_maps': {
     name: 'MapTiler Basiskaarten',
     category: 'Kaart Overlays',
     description: 'Schakelt MapTiler Outdoor- en Winterkaarten in (gratis API-sleutel vereist).',
+    coverage: 'Wereldwijd',
     default: true
   },
   'rainviewer': {
     name: 'RainViewer Buienradar',
     category: 'Kaart Overlays',
     description: 'Toont een live geanimeerde neerslagradar overlay.',
+    coverage: 'Wereldwijd',
     default: true
   },
   'blitzortung': {
     name: 'Blitzortung Live Bliksem',
     category: 'Kaart Overlays',
     description: 'Toont recente bliksemontladingen in kaartbeeld.',
+    coverage: 'Wereldwijd',
     default: true
   },
   'natura2000': {
     name: 'Natura 2000 Natuurbescherming (EU)',
     category: 'Kaart Overlays',
     description: 'Toont de begrenzingen van Natura 2000 beschermde natuurgebieden in Europa.',
+    coverage: 'Europa',
     default: true
   },
   'rijksmonumenten': {
     name: 'Rijksmonumenten Register (PDOK)',
     category: 'Kaart Overlays',
     description: 'Toont alle rijksmonumenten als rode markers.',
+    coverage: 'Nederland',
     default: true
   },
   'lightpollution': {
     name: 'NASA Lichtvervuiling',
     category: 'Kaart Overlays',
     description: 'Toont kunstmatige nachtverlichting voor sterrenkijken.',
+    coverage: 'Wereldwijd',
     default: true
   },
   'osm_traces': {
     name: 'OSM GPS Heatmap',
     category: 'Kaart Overlays',
     description: 'Toont de meest bewandelde en befietste OSM sporen.',
+    coverage: 'Wereldwijd',
     default: true
   },
 
@@ -329,24 +344,28 @@ const API_REGISTRY = {
     name: 'Gemini AI Vision Soorten Scanner',
     category: 'Natuur & Bodem',
     description: 'Fotografeer en identificeer flora en fauna met AI.',
+    coverage: 'Wereldwijd',
     default: true
   },
   'gbif': {
     name: 'GBIF Soorten Checklist',
     category: 'Natuur & Bodem',
     description: 'Toont welke dier- en plantensoorten hier waargenomen zijn.',
+    coverage: 'Wereldwijd',
     default: true
   },
   'xeno_canto': {
     name: 'Xeno-Canto Vogelgeluiden',
     category: 'Natuur & Bodem',
     description: 'Luister naar vogelgeluiden die in de buurt zijn opgenomen.',
+    coverage: 'Wereldwijd',
     default: true
   },
   'macrostrat': {
     name: 'Macrostrat Geologie Bodemscan',
     category: 'Natuur & Bodem',
     description: 'Vertelt je de geologische ondergrond onder je voeten.',
+    coverage: 'Wereldwijd',
     default: true
   },
 
@@ -355,18 +374,21 @@ const API_REGISTRY = {
     name: 'Wikipedia Geosearch POIs',
     category: 'POI & Route',
     description: 'Scant Wikipedia artikelen in de buurt en toont ze op de kaart.',
+    coverage: 'Wereldwijd',
     default: true
   },
   'inaturalist_poi': {
     name: 'iNaturalist Waarnemingen POIs',
     category: 'POI & Route',
     description: 'Toont recente natuurwaarnemingen in de buurt.',
+    coverage: 'Wereldwijd',
     default: true
   },
   'openroute_isochrone': {
     name: 'OpenRouteService Isochronen',
     category: 'POI & Route',
     description: 'Berekent je exacte wandelbereik in 30 minuten.',
+    coverage: 'Wereldwijd',
     default: true
   }
 };
@@ -2696,11 +2718,15 @@ function renderToolboxCheckboxes() {
       wrapper.style.marginBottom = '4px';
       
       const enabled = isApiEnabled(api.id);
+      const coverageBadge = api.coverage ? ` <span style="font-size:0.55rem; padding: 1px 4px; border-radius: 3px; background:${api.coverage === 'Wereldwijd' ? '#4caf50' : '#ff9800'}; color:#0a0b0e; font-weight:bold; margin-left: 6px; text-transform:uppercase;">${api.coverage}</span>` : '';
 
       wrapper.innerHTML = `
         <input type="checkbox" data-api-id="${api.id}" ${enabled ? 'checked' : ''} style="margin-top: 3px; cursor: pointer;" />
-        <div style="display: flex; flex-direction: column; gap: 2px;">
-          <strong style="font-size: 0.78rem; color: var(--text-primary);">${api.name}</strong>
+        <div style="display: flex; flex-direction: column; gap: 2px; width: 100%;">
+          <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; flex-wrap: wrap; gap: 4px;">
+            <strong style="font-size: 0.78rem; color: var(--text-primary);">${api.name}</strong>
+            ${coverageBadge}
+          </div>
           <span style="font-size: 0.65rem; color: var(--text-muted); line-height: 1.3;">${api.description}</span>
         </div>
       `;
