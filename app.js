@@ -535,64 +535,69 @@ function initMap() {
 
 // --- Initialize App ---
 document.addEventListener('DOMContentLoaded', () => {
-  initMap();
-  setupDrawerController();
-  setupCollapsibleInfo();
-  setupGeolocation();
-  setupRecordingSystem();
-  setupRoutePlanner();
-  setupMeasurementTool();
-  setupLayersManager();
-  setupOverlaysManager();
-  setupPoiExplorer();
-  setupSettingsDialog();
-  setupNaturePanel();
-  setupToolboxDialog();
-  initFirebase();
-  setupMaptilerLayers();
-  
-  // LocalStorage check for items
-  loadSavedData();
-  applyApiVisibility();
-  
-  // Show guide on first launch
-  if (!localStorage.getItem('geoforge_guide_seen')) {
-    el.guideDialog.showModal();
-  }
+  try {
+    initMap();
+    setupDrawerController();
+    setupCollapsibleInfo();
+    setupGeolocation();
+    setupRecordingSystem();
+    setupRoutePlanner();
+    setupMeasurementTool();
+    setupLayersManager();
+    setupOverlaysManager();
+    setupPoiExplorer();
+    setupSettingsDialog();
+    setupNaturePanel();
+    setupToolboxDialog();
+    initFirebase();
+    setupMaptilerLayers();
+    
+    // LocalStorage check for items
+    loadSavedData();
+    applyApiVisibility();
+    
+    // Show guide on first launch
+    if (!localStorage.getItem('geoforge_guide_seen')) {
+      el.guideDialog.showModal();
+    }
 
-  // Bind guide actions
-  el.btnCloseGuide.addEventListener('click', () => {
-    localStorage.setItem('geoforge_guide_seen', 'true');
-    el.guideDialog.close();
-  });
-
-  if (el.btnCloseBeaconViewer) {
-    el.btnCloseBeaconViewer.addEventListener('click', stopViewingLiveBeacon);
-  }
-
-  // Cache reset handler
-  if (el.btnForceUpdate) {
-    el.btnForceUpdate.addEventListener('click', () => {
-      if (confirm('Wil je de app forceer updaten en de cache leegmaken?')) {
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(registrations => {
-            for (let registration of registrations) {
-              registration.unregister();
-            }
-          });
-        }
-        if ('caches' in window) {
-          caches.keys().then(names => {
-            for (let name of names) {
-              caches.delete(name);
-            }
-          });
-        }
-        setTimeout(() => {
-          window.location.reload(true);
-        }, 500);
-      }
+    // Bind guide actions
+    el.btnCloseGuide.addEventListener('click', () => {
+      localStorage.setItem('geoforge_guide_seen', 'true');
+      el.guideDialog.close();
     });
+
+    if (el.btnCloseBeaconViewer) {
+      el.btnCloseBeaconViewer.addEventListener('click', stopViewingLiveBeacon);
+    }
+
+    // Cache reset handler
+    if (el.btnForceUpdate) {
+      el.btnForceUpdate.addEventListener('click', () => {
+        if (confirm('Wil je de app forceer updaten en de cache leegmaken?')) {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+              for (let registration of registrations) {
+                registration.unregister();
+              }
+            });
+          }
+          if ('caches' in window) {
+            caches.keys().then(names => {
+              for (let name of names) {
+                caches.delete(name);
+              }
+            });
+          }
+          setTimeout(() => {
+            window.location.reload(true);
+          }, 500);
+        }
+      });
+    }
+  } catch (err) {
+    console.error("GeoForge Initialization Failed:", err);
+    alert("GeoForge Initialization Failed: " + err.message + "\nStack: " + err.stack);
   }
 });
 
