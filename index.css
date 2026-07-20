@@ -1331,3 +1331,103 @@ input:checked + .slider:before {
   display: flex;
   align-items: center;
 }
+
+/* --- NATUUR & ONTDEK CARD STYLES --- */
+.nature-card {
+  background: var(--bg-dark-900);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.card-header-nature {
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-cyan);
+  letter-spacing: 0.05em;
+}
+
+.card-body-nature {
+  padding: 10px;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.list-box-nature {
+  max-height: 160px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.species-item-nature {
+  background: rgba(255, 255, 255, 0.01);
+  padding: 6px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.species-name-lat {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.bird-item-nature {
+  background: rgba(255, 255, 255, 0.01);
+  padding: 8px;
+  border-radius: 3px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bird-header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+}
+
+.bird-audio-player {
+  width: 100%;
+  height: 28px;
+  outline: none;
+  background: none;
+}
+
+/* Audio player custom dark overrides for browser consistency */
+.bird-audio-player::-webkit-media-controls-panel {
+  background-color: var(--bg-dark-900);
+}
+
+.photo-preview-box {
+  background: var(--bg-dark-900);
+  border: 1px dashed var(--border-color);
+  padding: 8px;
+  border-radius: var(--border-radius-sm);
+  text-align: center;
+}
+
+.ai-result-box h4 {
+  color: var(--color-cyan);
+  margin-bottom: 4px;
+}
+
+.ai-result-box p {
+  margin-bottom: 8px;
+}
+
+.ai-result-box ul {
+  padding-left: 14px;
+  margin-bottom: 8px;
+}
