@@ -191,13 +191,142 @@ const el = {
   inputW3wKey: document.getElementById('input-w3w-key'),
   btnSaveSettings: document.getElementById('btn-save-settings'),
   btnCloseSettingsDialog: document.getElementById('btn-close-settings-dialog'),
+  btnOpenToolbox: document.getElementById('btn-open-toolbox'),
+  toolboxDialog: document.getElementById('toolbox-dialog'),
+  toolboxModulesList: document.getElementById('toolbox-modules-list'),
+  btnSaveToolbox: document.getElementById('btn-save-toolbox'),
+  btnCloseToolbox: document.getElementById('btn-close-toolbox'),
   
   guideDialog: document.getElementById('guide-dialog'),
   btnCloseGuide: document.getElementById('btn-close-guide'),
   toastContainer: document.getElementById('toast-container')
 };
 
-// --- Map Initialization ---
+// --- API & Module Configuration Registry ---
+const API_REGISTRY = {
+  // Category: Dashboard & Weer
+  'open_meteo': {
+    name: 'Open-Meteo Weer',
+    category: 'Dashboard & Weer',
+    description: 'Laadt actuele weersinformatie en temperaturen op je huidige locatie.',
+    default: true
+  },
+  'sunrise_sunset': {
+    name: 'Sunrise-Sunset Tijden',
+    category: 'Dashboard & Weer',
+    description: 'Berekent zonsopgang- en ondergangstijden.',
+    default: true
+  },
+  'waqi': {
+    name: 'WAQI Luchtkwaliteit',
+    category: 'Dashboard & Weer',
+    description: 'Laadt live luchtkwaliteit van lokale meetstations.',
+    default: true
+  },
+  'plus_codes': {
+    name: 'Google Plus Codes',
+    category: 'Dashboard & Weer',
+    description: 'Berekent een korte noodcode voor reddingsdiensten.',
+    default: true
+  },
+  'usgs_elevation': {
+    name: 'USGS/Open-Elevation Correctie',
+    category: 'Dashboard & Weer',
+    description: 'Verifieert GPS-hoogte aan de hand van hoogtemodellen.',
+    default: true
+  },
+  'what3words': {
+    name: 'what3words Noodadres',
+    category: 'Dashboard & Weer',
+    description: 'Vertaalt je coördinaten naar een 3-woorden adres.',
+    default: false
+  },
+  
+  // Category: Kaart Overlays
+  'rainviewer': {
+    name: 'RainViewer Buienradar',
+    category: 'Kaart Overlays',
+    description: 'Toont een live geanimeerde neerslagradar overlay.',
+    default: true
+  },
+  'blitzortung': {
+    name: 'Blitzortung Live Bliksem',
+    category: 'Kaart Overlays',
+    description: 'Toont recente bliksemontladingen in kaartbeeld.',
+    default: true
+  },
+  'natura2000': {
+    name: 'Natura 2000 Gebieden (PDOK)',
+    category: 'Kaart Overlays',
+    description: 'Toont de begrenzingen van Natura 2000 natuurgebieden in NL.',
+    default: true
+  },
+  'rijksmonumenten': {
+    name: 'Rijksmonumenten Register (PDOK)',
+    category: 'Kaart Overlays',
+    description: 'Toont alle rijksmonumenten als rode markers.',
+    default: true
+  },
+  'lightpollution': {
+    name: 'NASA Lichtvervuiling',
+    category: 'Kaart Overlays',
+    description: 'Toont kunstmatige nachtverlichting voor sterrenkijken.',
+    default: true
+  },
+  'osm_traces': {
+    name: 'OSM GPS Heatmap',
+    category: 'Kaart Overlays',
+    description: 'Toont de meest bewandelde en befietste OSM sporen.',
+    default: true
+  },
+
+  // Category: Natuur & Bodem
+  'gemini_vision': {
+    name: 'Gemini AI Vision Soorten Scanner',
+    category: 'Natuur & Bodem',
+    description: 'Fotografeer en identificeer flora en fauna met AI.',
+    default: true
+  },
+  'gbif': {
+    name: 'GBIF Soorten Checklist',
+    category: 'Natuur & Bodem',
+    description: 'Toont welke dier- en plantensoorten hier waargenomen zijn.',
+    default: true
+  },
+  'xeno_canto': {
+    name: 'Xeno-Canto Vogelgeluiden',
+    category: 'Natuur & Bodem',
+    description: 'Luister naar vogelgeluiden die in de buurt zijn opgenomen.',
+    default: true
+  },
+  'macrostrat': {
+    name: 'Macrostrat Geologie Bodemscan',
+    category: 'Natuur & Bodem',
+    description: 'Vertelt je de geologische ondergrond onder je voeten.',
+    default: true
+  },
+
+  // Category: POI & Route
+  'wikipedia_poi': {
+    name: 'Wikipedia Geosearch POIs',
+    category: 'POI & Route',
+    description: 'Scant Wikipedia artikelen in de buurt en toont ze op de kaart.',
+    default: true
+  },
+  'inaturalist_poi': {
+    name: 'iNaturalist Waarnemingen POIs',
+    category: 'POI & Route',
+    description: 'Toont recente natuurwaarnemingen in de buurt.',
+    default: true
+  },
+  'openroute_isochrone': {
+    name: 'OpenRouteService Isochronen',
+    category: 'POI & Route',
+    description: 'Berekent je exacte wandelbereik in 30 minuten.',
+    default: true
+  }
+};
+
 let map;
 
 function initMap() {
@@ -299,9 +428,11 @@ document.addEventListener('DOMContentLoaded', () => {
   setupPoiExplorer();
   setupSettingsDialog();
   setupNaturePanel();
+  setupToolboxDialog();
   
   // LocalStorage check for items
   loadSavedData();
+  applyApiVisibility();
   
   // Show guide on first launch
   if (!localStorage.getItem('geoforge_guide_seen')) {
@@ -519,82 +650,98 @@ function refreshLocalInfo() {
   const lng = center.lng;
 
   // 1. Open-Meteo Weather
-  el.infoWeather.textContent = 'Laden...';
-  fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`)
-    .then(res => res.json())
-    .then(data => {
-      if (data.current_weather) {
-        const temp = data.current_weather.temperature;
-        const code = data.current_weather.weathercode;
-        const weatherDesc = getWeatherDescription(code);
-        el.infoWeather.textContent = `${temp}°C | ${weatherDesc}`;
-      } else {
-        el.infoWeather.textContent = 'Fout';
-      }
-    })
-    .catch(() => el.infoWeather.textContent = 'Netwerkfout');
-
-  // 2. Sunrise / Sunset
-  el.infoSun.textContent = 'Laden...';
-  fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&formatted=0`)
-    .then(res => res.json())
-    .then(data => {
-      if (data.results) {
-        const sunrise = new Date(data.results.sunrise).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const sunset = new Date(data.results.sunset).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        el.infoSun.textContent = `🌅 ${sunrise} | 🌇 ${sunset}`;
-      } else {
-        el.infoSun.textContent = 'Fout';
-      }
-    })
-    .catch(() => el.infoSun.textContent = 'Netwerkfout');
-
-  // 3. Air Quality (WAQI API using demo token)
-  el.infoAqi.textContent = 'Laden...';
-  fetch(`https://api.waqi.info/feed/geo:${lat};${lng}/?token=demo`)
-    .then(res => res.json())
-    .then(data => {
-      if (data.status === 'ok' && data.data) {
-        const aqi = data.data.aqi;
-        const qual = getAqiQualityText(aqi);
-        el.infoAqi.textContent = `AQI ${aqi} (${qual})`;
-      } else {
-        el.infoAqi.textContent = 'Niet beschikbaar';
-      }
-    })
-    .catch(() => el.infoAqi.textContent = 'Netwerkfout');
-
-  // 4. Coordinates / Plus Code / what3words
-  el.infoPluscode.textContent = 'Laden...';
-  const w3wKey = localStorage.getItem('geoforge_w3w_key');
-  if (w3wKey) {
-    fetch(`https://api.what3words.com/v3/convert-to-3wa?coordinates=${lat},${lng}&key=${w3wKey}`)
+  if (isApiEnabled('open_meteo')) {
+    el.infoWeather.textContent = 'Laden...';
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`)
       .then(res => res.json())
       .then(data => {
-        if (data.words) {
-          el.infoPluscode.textContent = `///${data.words}`;
+        if (data.current_weather) {
+          const temp = data.current_weather.temperature;
+          const code = data.current_weather.weathercode;
+          const weatherDesc = getWeatherDescription(code);
+          el.infoWeather.textContent = `${temp}°C | ${weatherDesc}`;
         } else {
-          el.infoPluscode.textContent = getFallbackPlusCode(lat, lng);
+          el.infoWeather.textContent = 'Fout';
         }
       })
-      .catch(() => el.infoPluscode.textContent = getFallbackPlusCode(lat, lng));
-  } else {
+      .catch(() => el.infoWeather.textContent = 'Netwerkfout');
+  }
+
+  // 2. Sunrise / Sunset
+  if (isApiEnabled('sunrise_sunset')) {
+    el.infoSun.textContent = 'Laden...';
+    fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&formatted=0`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.results) {
+          const sunrise = new Date(data.results.sunrise).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const sunset = new Date(data.results.sunset).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          el.infoSun.textContent = `🌅 ${sunrise} | 🌇 ${sunset}`;
+        } else {
+          el.infoSun.textContent = 'Fout';
+        }
+      })
+      .catch(() => el.infoSun.textContent = 'Netwerkfout');
+  }
+
+  // 3. Air Quality (WAQI API using demo token)
+  if (isApiEnabled('waqi')) {
+    el.infoAqi.textContent = 'Laden...';
+    fetch(`https://api.waqi.info/feed/geo:${lat};${lng}/?token=demo`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'ok' && data.data) {
+          const aqi = data.data.aqi;
+          const qual = getAqiQualityText(aqi);
+          el.infoAqi.textContent = `AQI ${aqi} (${qual})`;
+        } else {
+          el.infoAqi.textContent = 'Niet beschikbaar';
+        }
+      })
+      .catch(() => el.infoAqi.textContent = 'Netwerkfout');
+  }
+
+  // 4. Coordinates / Plus Code
+  if (isApiEnabled('plus_codes')) {
+    el.infoPluscode.textContent = 'Laden...';
     el.infoPluscode.textContent = getFallbackPlusCode(lat, lng);
   }
 
-  // 5. Gecorrigeerde USGS / Open-Elevation Hoogte
-  el.infoElevation.textContent = 'Hoogte checken...';
-  fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lng}`)
-    .then(res => res.json())
-    .then(data => {
-      if (data.results && data.results.length > 0) {
-        const alt = Math.round(data.results[0].elevation);
-        el.infoElevation.textContent = `${alt} m boven zeeniveau (USGS model)`;
-      } else {
-        el.infoElevation.textContent = 'Geen hoogte model match';
-      }
-    })
-    .catch(() => el.infoElevation.textContent = 'Netwerkfout model');
+  // 5. what3words
+  if (isApiEnabled('what3words')) {
+    el.infoW3wVal.textContent = 'Laden...';
+    const w3wKey = localStorage.getItem('geoforge_w3w_key');
+    if (w3wKey) {
+      fetch(`https://api.what3words.com/v3/convert-to-3wa?coordinates=${lat},${lng}&key=${w3wKey}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.words) {
+            el.infoW3wVal.textContent = `///${data.words}`;
+          } else {
+            el.infoW3wVal.textContent = 'Fout';
+          }
+        })
+        .catch(() => el.infoW3wVal.textContent = 'Netwerkfout');
+    } else {
+      el.infoW3wVal.textContent = 'API key vereist';
+    }
+  }
+
+  // 6. Gecorrigeerde USGS / Open-Elevation Hoogte
+  if (isApiEnabled('usgs_elevation')) {
+    el.infoElevation.textContent = 'Hoogte checken...';
+    fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lng}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.results && data.results.length > 0) {
+          const alt = Math.round(data.results[0].elevation);
+          el.infoElevation.textContent = `${alt} m boven zeeniveau (USGS model)`;
+        } else {
+          el.infoElevation.textContent = 'Geen hoogte model match';
+        }
+      })
+      .catch(() => el.infoElevation.textContent = 'Netwerkfout model');
+  }
 }
 
 function getWeatherDescription(code) {
@@ -2214,107 +2361,119 @@ function scanBiodiversityAndGeology() {
   showToast('Omgeving scannen...');
 
   // 1. Macrostrat Geology API
-  el.natureGeologyBox.classList.remove('hidden');
-  el.geologyDetails.innerHTML = '<span style="color:var(--text-muted);">Bodem scannen...</span>';
+  if (isApiEnabled('macrostrat')) {
+    el.natureGeologyBox.classList.remove('hidden');
+    el.geologyDetails.innerHTML = '<span style="color:var(--text-muted);">Bodem scannen...</span>';
 
-  fetch(`https://macrostrat.org/api/v2/geology?lat=${lat}&lng=${lng}`)
-    .then(res => res.json())
-    .then(data => {
-      if (data.success && data.success.data && data.success.data.length > 0) {
-        const geo = data.success.data[0];
-        el.geologyDetails.innerHTML = `
-          <strong>Tijdperk:</strong> ${geo.era || 'Onbekend'}<br/>
-          <strong>Formatie:</strong> ${geo.map_unit_name || 'Niet benoemd'}<br/>
-          <strong>Steensoort:</strong> ${geo.lithology || 'Onbekend'}<br/>
-          <strong>Omschrijving:</strong> ${geo.comments || 'Geen details beschikbaar.'}
-        `;
-      } else {
-        el.geologyDetails.innerHTML = '<span style="color:var(--color-red);">Geen bodemgegevens gevonden op deze coördinaten.</span>';
-      }
-    })
-    .catch(() => {
-      el.geologyDetails.innerHTML = '<span style="color:var(--color-red);">Netwerkfout bij bodemscan.</span>';
-    });
+    fetch(`https://macrostrat.org/api/v2/geology?lat=${lat}&lng=${lng}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.success.data && data.success.data.length > 0) {
+          const geo = data.success.data[0];
+          el.geologyDetails.innerHTML = `
+            <strong>Tijdperk:</strong> ${geo.era || 'Onbekend'}<br/>
+            <strong>Formatie:</strong> ${geo.map_unit_name || 'Niet benoemd'}<br/>
+            <strong>Steensoort:</strong> ${geo.lithology || 'Onbekend'}<br/>
+            <strong>Omschrijving:</strong> ${geo.comments || 'Geen details beschikbaar.'}
+          `;
+        } else {
+          el.geologyDetails.innerHTML = '<span style="color:var(--color-red);">Geen bodemgegevens gevonden op deze coördinaten.</span>';
+        }
+      })
+      .catch(() => {
+        el.geologyDetails.innerHTML = '<span style="color:var(--color-red);">Netwerkfout bij bodemscan.</span>';
+      });
+  } else {
+    el.natureGeologyBox.classList.add('hidden');
+  }
 
   // 2. GBIF Checklist
-  el.natureSpeciesBox.classList.remove('hidden');
-  el.speciesDetails.innerHTML = '<span style="color:var(--text-muted);">Flora & Fauna checklist laden...</span>';
+  if (isApiEnabled('gbif')) {
+    el.natureSpeciesBox.classList.remove('hidden');
+    el.speciesDetails.innerHTML = '<span style="color:var(--text-muted);">Flora & Fauna checklist laden...</span>';
 
-  fetch(`https://api.gbif.org/v1/occurrence/search?decimalLatitude=${lat}&decimalLongitude=${lng}&radius=1000&limit=40`)
-    .then(res => res.json())
-    .then(data => {
-      if (data.results && data.results.length > 0) {
-        el.speciesDetails.innerHTML = '';
-        const speciesCounts = {};
-        const speciesGroups = {};
-        
-        data.results.forEach(obs => {
-          if (obs.vernacularName || obs.scientificName) {
-            const name = obs.vernacularName || obs.scientificName;
-            speciesCounts[name] = (speciesCounts[name] || 0) + 1;
-            speciesGroups[name] = obs.class || obs.kingdom || 'Algemeen';
-          }
-        });
-
-        const sortedSpecies = Object.keys(speciesCounts).sort((a,b) => speciesCounts[b] - speciesCounts[a]).slice(0, 8);
-
-        sortedSpecies.forEach(name => {
-          const div = document.createElement('div');
-          div.className = 'species-item-nature';
+    fetch(`https://api.gbif.org/v1/occurrence/search?decimalLatitude=${lat}&decimalLongitude=${lng}&radius=1000&limit=40`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.results && data.results.length > 0) {
+          el.speciesDetails.innerHTML = '';
+          const speciesCounts = {};
+          const speciesGroups = {};
           
-          let emoji = '🌲';
-          const group = speciesGroups[name];
-          if (group === 'Mammalia') emoji = '🦊';
-          else if (group === 'Aves') emoji = '🐦';
-          else if (group === 'Insecta') emoji = '🦋';
-          else if (group === 'Liliopsida' || group === 'Magnoliopsida') emoji = '🌸';
-          else if (group === 'Fungi') emoji = '🍄';
+          data.results.forEach(obs => {
+            if (obs.vernacularName || obs.scientificName) {
+              const name = obs.vernacularName || obs.scientificName;
+              speciesCounts[name] = (speciesCounts[name] || 0) + 1;
+              speciesGroups[name] = obs.class || obs.kingdom || 'Algemeen';
+            }
+          });
 
-          div.innerHTML = `
-            <span>${emoji} <strong>${name}</strong></span>
-            <span class="species-name-lat">${group.substring(0, 10)}</span>
-          `;
-          el.speciesDetails.appendChild(div);
-        });
-      } else {
-        el.speciesDetails.innerHTML = '<div class="no-data-text">Geen biologische registraties gevonden in dit grid.</div>';
-      }
-    })
-    .catch(() => {
-      el.speciesDetails.innerHTML = '<div class="no-data-text" style="color:var(--color-red);">Kon soortgegevens niet laden.</div>';
-    });
+          const sortedSpecies = Object.keys(speciesCounts).sort((a,b) => speciesCounts[b] - speciesCounts[a]).slice(0, 8);
+
+          sortedSpecies.forEach(name => {
+            const div = document.createElement('div');
+            div.className = 'species-item-nature';
+            
+            let emoji = '🌲';
+            const group = speciesGroups[name];
+            if (group === 'Mammalia') emoji = '🦊';
+            else if (group === 'Aves') emoji = '🐦';
+            else if (group === 'Insecta') emoji = '🦋';
+            else if (group === 'Liliopsida' || group === 'Magnoliopsida') emoji = '🌸';
+            else if (group === 'Fungi') emoji = '🍄';
+
+            div.innerHTML = `
+              <span>${emoji} <strong>${name}</strong></span>
+              <span class="species-name-lat">${group.substring(0, 10)}</span>
+            `;
+            el.speciesDetails.appendChild(div);
+          });
+        } else {
+          el.speciesDetails.innerHTML = '<div class="no-data-text">Geen biologische registraties gevonden in dit grid.</div>';
+        }
+      })
+      .catch(() => {
+        el.speciesDetails.innerHTML = '<div class="no-data-text" style="color:var(--color-red);">Kon soortgegevens niet laden.</div>';
+      });
+  } else {
+    el.natureSpeciesBox.classList.add('hidden');
+  }
 
   // 3. Xeno-Canto bird songs
-  el.natureBirdsBox.classList.remove('hidden');
-  el.birdsDetails.innerHTML = '<span style="color:var(--text-muted);">Geluiden zoeken...</span>';
+  if (isApiEnabled('xeno_canto')) {
+    el.natureBirdsBox.classList.remove('hidden');
+    el.birdsDetails.innerHTML = '<span style="color:var(--text-muted);">Geluiden zoeken...</span>';
 
-  fetch(`https://xeno-canto.org/api/2/recordings?query=lat:${lat}%20lon:${lng}%20box:0.15`)
-    .then(res => res.json())
-    .then(data => {
-      if (data.recordings && data.recordings.length > 0) {
-        el.birdsDetails.innerHTML = '';
-        const recs = data.recordings.slice(0, 5);
-        recs.forEach(rec => {
-          const div = document.createElement('div');
-          div.className = 'bird-item-nature';
-          const birdName = rec.en || rec.gen + ' ' + rec.sp;
-          
-          div.innerHTML = `
-            <div class="bird-header">
-              <span>🐦 <strong>${birdName}</strong></span>
-              <span class="species-name-lat">${rec.gen} ${rec.sp}</span>
-            </div>
-            <audio controls class="bird-audio-player" src="${rec.file}"></audio>
-          `;
-          el.birdsDetails.appendChild(div);
-        });
-      } else {
-        el.birdsDetails.innerHTML = '<div class="no-data-text">Geen vogelgeluid-opnames gevonden voor deze locatie.</div>';
-      }
-    })
-    .catch(() => {
-      el.birdsDetails.innerHTML = '<div class="no-data-text" style="color:var(--color-red);">Fout bij inladen vogelgeluiden.</div>';
-    });
+    fetch(`https://xeno-canto.org/api/2/recordings?query=lat:${lat}%20lon:${lng}%20box:0.15`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.recordings && data.recordings.length > 0) {
+          el.birdsDetails.innerHTML = '';
+          const recs = data.recordings.slice(0, 5);
+          recs.forEach(rec => {
+            const div = document.createElement('div');
+            div.className = 'bird-item-nature';
+            const birdName = rec.en || rec.gen + ' ' + rec.sp;
+            
+            div.innerHTML = `
+              <div class="bird-header">
+                <span>🐦 <strong>${birdName}</strong></span>
+                <span class="species-name-lat">${rec.gen} ${rec.sp}</span>
+              </div>
+              <audio controls class="bird-audio-player" src="${rec.file}"></audio>
+            `;
+            el.birdsDetails.appendChild(div);
+          });
+        } else {
+          el.birdsDetails.innerHTML = '<div class="no-data-text">Geen vogelgeluid-opnames gevonden voor deze locatie.</div>';
+        }
+      })
+      .catch(() => {
+        el.birdsDetails.innerHTML = '<div class="no-data-text" style="color:var(--color-red);">Fout bij inladen vogelgeluiden.</div>';
+      });
+  } else {
+    el.natureBirdsBox.classList.add('hidden');
+  }
 }
 
 function shareLocationAndRoute() {
@@ -2340,4 +2499,109 @@ function shareLocationAndRoute() {
   })
     .then(() => showToast('Locatie succesvol gedeeld!'))
     .catch(err => console.log('Share failed:', err));
+}
+
+// --- API TOOLBOX CONFIGURATION DIALOG ---
+function isApiEnabled(id) {
+  if (!API_REGISTRY[id]) return false;
+  const val = localStorage.getItem('geoforge_api_disabled_' + id);
+  if (val === 'true') return false;
+  if (val === 'false') return true;
+  return API_REGISTRY[id].default;
+}
+
+function applyApiVisibility() {
+  document.querySelectorAll('.api-module-ui').forEach(el => {
+    const apiId = el.getAttribute('data-api');
+    if (apiId) {
+      const enabled = isApiEnabled(apiId);
+      if (enabled) {
+        el.classList.remove('hidden');
+      } else {
+        el.classList.add('hidden');
+      }
+    }
+  });
+}
+
+function setupToolboxDialog() {
+  if (!el.btnOpenToolbox) return;
+
+  el.btnOpenToolbox.addEventListener('click', () => {
+    renderToolboxCheckboxes();
+    el.toolboxDialog.showModal();
+  });
+
+  el.btnCloseToolbox.addEventListener('click', () => {
+    el.toolboxDialog.close();
+  });
+
+  el.btnSaveToolbox.addEventListener('click', () => {
+    const checkboxes = el.toolboxModulesList.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+      const apiId = cb.getAttribute('data-api-id');
+      if (apiId) {
+        localStorage.setItem('geoforge_api_disabled_' + apiId, cb.checked ? 'false' : 'true');
+      }
+    });
+
+    el.toolboxDialog.close();
+    applyApiVisibility();
+    showToast('API-Toolbox instellingen toegepast.');
+    
+    // Refresh display
+    refreshLocalInfo();
+  });
+}
+
+function renderToolboxCheckboxes() {
+  el.toolboxModulesList.innerHTML = '';
+  
+  const categories = {};
+  Object.keys(API_REGISTRY).forEach(id => {
+    const api = API_REGISTRY[id];
+    if (!categories[api.category]) {
+      categories[api.category] = [];
+    }
+    categories[api.category].push({ id, ...api });
+  });
+
+  Object.keys(categories).forEach(cat => {
+    const catHeader = document.createElement('h3');
+    catHeader.style.fontSize = '0.78rem';
+    catHeader.style.color = 'var(--color-cyan)';
+    catHeader.style.borderBottom = '1px solid var(--border-color)';
+    catHeader.style.paddingBottom = '4px';
+    catHeader.style.marginTop = '12px';
+    catHeader.style.marginBottom = '6px';
+    catHeader.style.textTransform = 'uppercase';
+    catHeader.style.letterSpacing = '0.05em';
+    catHeader.textContent = cat;
+    el.toolboxModulesList.appendChild(catHeader);
+
+    categories[cat].forEach(api => {
+      const wrapper = document.createElement('label');
+      wrapper.className = 'toggle-control';
+      wrapper.style.display = 'flex';
+      wrapper.style.alignItems = 'flex-start';
+      wrapper.style.gap = '10px';
+      wrapper.style.cursor = 'pointer';
+      wrapper.style.background = 'rgba(255, 255, 255, 0.01)';
+      wrapper.style.padding = '8px';
+      wrapper.style.borderRadius = 'var(--border-radius-sm)';
+      wrapper.style.border = '1px solid rgba(255, 255, 255, 0.03)';
+      wrapper.style.marginBottom = '4px';
+      
+      const enabled = isApiEnabled(api.id);
+
+      wrapper.innerHTML = `
+        <input type="checkbox" data-api-id="${api.id}" ${enabled ? 'checked' : ''} style="margin-top: 3px; cursor: pointer;" />
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <strong style="font-size: 0.78rem; color: var(--text-primary);">${api.name}</strong>
+          <span style="font-size: 0.65rem; color: var(--text-muted); line-height: 1.3;">${api.description}</span>
+        </div>
+      `;
+      el.toolboxModulesList.appendChild(wrapper);
+    });
+  });
 }

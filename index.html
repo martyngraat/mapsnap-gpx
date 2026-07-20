@@ -155,25 +155,29 @@
             
             <div class="collapse-content hidden" id="local-info-content">
               <div class="info-grid-row">
-                <div class="info-cell">
+                <div class="info-cell api-module-ui" data-api="open_meteo">
                   <span class="info-cell-label">🌦️ Weersverwachting</span>
                   <span class="info-cell-value" id="info-weather">Laden...</span>
                 </div>
-                <div class="info-cell">
+                <div class="info-cell api-module-ui" data-api="sunrise_sunset">
                   <span class="info-cell-label">☀️ Zon & Schemering</span>
                   <span class="info-cell-value" id="info-sun">Laden...</span>
                 </div>
-                <div class="info-cell">
+                <div class="info-cell api-module-ui" data-api="waqi">
                   <span class="info-cell-label">🍃 Luchtkwaliteit</span>
                   <span class="info-cell-value" id="info-aqi">Laden...</span>
                 </div>
-                <div class="info-cell">
+                <div class="info-cell api-module-ui" data-api="plus_codes">
                   <span class="info-cell-label">📐 Noodlocatie Code</span>
                   <span class="info-cell-value" id="info-pluscode">Laden...</span>
                 </div>
-                <div class="info-cell" style="grid-column: span 2;">
+                <div class="info-cell api-module-ui" data-api="usgs_elevation" style="grid-column: span 2;">
                   <span class="info-cell-label">🏔️ USGS Gecorrigeerde Hoogte</span>
                   <span class="info-cell-value mono text-cyan" id="info-elevation">GPS wachten...</span>
+                </div>
+                <div class="info-cell api-module-ui hidden" data-api="what3words" style="grid-column: span 2;" id="info-w3w-container">
+                  <span class="info-cell-label">/// what3words Noodadres</span>
+                  <span class="info-cell-value mono text-cyan" id="info-w3w-val">API key vereist</span>
                 </div>
               </div>
               <button id="btn-refresh-local-info" class="btn btn-secondary btn-full" style="margin-top:10px; font-size:0.75rem; padding:6px;">
@@ -245,7 +249,7 @@
           </div>
           
           <!-- Route Isochrone -->
-          <div class="drawer-section" style="margin-top:15px; padding-top:15px;">
+          <div class="drawer-section api-module-ui" data-api="openroute_isochrone" style="margin-top:15px; padding-top:15px;">
             <h3 class="section-title">Wandelbereik (Isochroom)</h3>
             <p class="panel-desc" style="margin-bottom:8px;">Tekent een grens die laat zien hoever je vanaf het kaartmidden kunt wandelen.</p>
             <div class="control-buttons-row">
@@ -366,7 +370,7 @@
                 </label>
                 <span>🚵 Mountainbikenetwerk (MTB Trails)</span>
               </div>
-              <div class="toggle-control">
+              <div class="toggle-control api-module-ui" data-api="osm_traces">
                 <label class="switch">
                   <input type="checkbox" id="overlay-traces" />
                   <span class="slider round"></span>
@@ -379,14 +383,14 @@
           <div class="drawer-section">
             <h3 class="section-title">🌦️ Weer & Veiligheid</h3>
             <div class="toggle-list">
-              <div class="toggle-control">
+              <div class="toggle-control api-module-ui" data-api="rainviewer">
                 <label class="switch">
                   <input type="checkbox" id="overlay-radar" />
                   <span class="slider round"></span>
                 </label>
                 <span>🌧️ Buienradar Overlay (RainViewer)</span>
               </div>
-              <div class="toggle-control">
+              <div class="toggle-control api-module-ui" data-api="blitzortung">
                 <label class="switch">
                   <input type="checkbox" id="overlay-lightning" />
                   <span class="slider round"></span>
@@ -399,21 +403,21 @@
           <div class="drawer-section">
             <h3 class="section-title">🌲 Natuur & Omgeving</h3>
             <div class="toggle-list">
-              <div class="toggle-control">
+              <div class="toggle-control api-module-ui" data-api="natura2000">
                 <label class="switch">
                   <input type="checkbox" id="overlay-natura2000" />
                   <span class="slider round"></span>
                 </label>
                 <span>Paars: Natura 2000 Gebieden (NL)</span>
               </div>
-              <div class="toggle-control">
+              <div class="toggle-control api-module-ui" data-api="rijksmonumenten">
                 <label class="switch">
                   <input type="checkbox" id="overlay-monuments" />
                   <span class="slider round"></span>
                 </label>
                 <span>Rood: Rijksmonumenten Stippen (NL)</span>
               </div>
-              <div class="toggle-control">
+              <div class="toggle-control api-module-ui" data-api="lightpollution">
                 <label class="switch">
                   <input type="checkbox" id="overlay-lightpollution" />
                   <span class="slider round"></span>
@@ -424,12 +428,12 @@
           </div>
         </div>
 
-        <!-- PANEL 6: Natuur & Ontdek (New dedicated panel!) -->
+        <!-- PANEL 6: Natuur & Ontdek -->
         <div id="panel-nature" class="drawer-panel">
           <p class="panel-desc">Ontdek de biodiversiteit en bodem van je omgeving, en scan planten en dieren met AI.</p>
           
           <!-- Gemini AI Vision Nature Scanner -->
-          <div class="drawer-section">
+          <div class="drawer-section api-module-ui" data-api="gemini_vision">
             <h3 class="section-title">📷 Gemini AI Natuur Scanner</h3>
             <p class="panel-desc" style="margin-bottom:8px;">Maak of upload een foto van een dier, plant, insect of spoor voor AI-identificatie.</p>
             <div class="control-buttons-row">
@@ -455,13 +459,13 @@
             </button>
             
             <!-- Geology display -->
-            <div id="nature-geology-box" class="nature-card hidden" style="margin-top:12px;">
+            <div id="nature-geology-box" class="nature-card hidden api-module-ui" data-api="macrostrat" style="margin-top:12px;">
               <div class="card-header-nature">🪨 Geologische Ondergrond</div>
               <div id="geology-details" class="card-body-nature mono">Laden...</div>
             </div>
 
             <!-- GBIF Species list -->
-            <div id="nature-species-box" class="nature-card hidden" style="margin-top:10px;">
+            <div id="nature-species-box" class="nature-card hidden api-module-ui" data-api="gbif" style="margin-top:10px;">
               <div class="card-header-nature">🦉 Geregistreerde Diersoorten (GBIF)</div>
               <div id="species-details" class="card-body-nature list-box-nature">
                 <!-- Checklist items -->
@@ -469,7 +473,7 @@
             </div>
 
             <!-- Xeno-Canto bird songs -->
-            <div id="nature-birds-box" class="nature-card hidden" style="margin-top:10px;">
+            <div id="nature-birds-box" class="nature-card hidden api-module-ui" data-api="xeno_canto" style="margin-top:10px;">
               <div class="card-header-nature">🎵 Geluiden van Vogels in de regio</div>
               <div id="birds-details" class="card-body-nature list-box-nature">
                 <!-- Bird songs with HTML5 audio player -->
@@ -503,13 +507,13 @@
               </label>
               <label class="poi-filter-checkbox">
                 <input type="checkbox" class="poi-cat-chk" value="viewpoint" checked />
-                <span class="chk-label">🔭 Uitzichten</span>
+                <span class="chk-label">🔭 Uitzichten & Bomen</span>
               </label>
-              <label class="poi-filter-checkbox">
+              <label class="poi-filter-checkbox api-module-ui" data-api="wikipedia_poi">
                 <input type="checkbox" class="poi-cat-chk" value="wikipedia" />
                 <span class="chk-label">📝 Wikipedia Info</span>
               </label>
-              <label class="poi-filter-checkbox">
+              <label class="poi-filter-checkbox api-module-ui" data-api="inaturalist_poi">
                 <input type="checkbox" class="poi-cat-chk" value="inaturalist" />
                 <span class="chk-label">🦉 Dieren/Planten</span>
               </label>
@@ -617,8 +621,31 @@
           <span class="help-text" style="font-size:0.65rem; color:var(--text-muted);">Optioneel. Indien leeg toont de app de standaard coördinaten.</span>
         </div>
 
+        <!-- Trigger for the Toolbox Configurator -->
+        <button id="btn-open-toolbox" class="btn btn-secondary btn-full" style="margin-bottom:12px;">
+          🧰 Beheer Actieve API Toolbox
+        </button>
+
         <button id="btn-save-settings" class="btn btn-primary btn-full">Instellingen Opslaan</button>
         <button id="btn-close-settings-dialog" class="btn btn-secondary btn-full" style="margin-top:8px;">Annuleren</button>
+      </div>
+    </dialog>
+
+    <!-- Dynamic API-Toolbox Configurator Dialog (New modal) -->
+    <dialog id="toolbox-dialog" class="custom-dialog" style="max-width:480px; width:92%;">
+      <div class="dialog-content">
+        <h2>API-Toolbox Configuratiescherm 🧰</h2>
+        <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:15px; text-align:left;">
+          Vink de modules aan die je actief in de app wilt tonen. Uitgeschakelde API's laden geen data en verbergen hun knoppen/weergaven om batterij en netwerkverkeer te besparen.
+        </p>
+        
+        <!-- Checklist categories will be dynamically injected here -->
+        <div id="toolbox-modules-list" style="max-height:280px; overflow-y:auto; margin-bottom:15px; text-align:left; display:flex; flex-direction:column; gap:12px; padding-right:6px;">
+          <!-- Dynamically populated -->
+        </div>
+
+        <button id="btn-save-toolbox" class="btn btn-primary btn-full">Voorkeuren Toepassen</button>
+        <button id="btn-close-toolbox" class="btn btn-secondary btn-full" style="margin-top:8px;">Annuleren</button>
       </div>
     </dialog>
 
