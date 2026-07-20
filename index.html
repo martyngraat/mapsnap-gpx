@@ -2,6 +2,27 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
+  <!-- Failsafe Recovery Cache Clearer -->
+  <script>
+    (function() {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get('update') === 'true' || p.get('clear_cache') === 'true') {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(regs => {
+            for (let r of regs) r.unregister();
+          });
+        }
+        if ('caches' in window) {
+          caches.keys().then(names => {
+            for (let n of names) caches.delete(n);
+          });
+        }
+        setTimeout(() => {
+          window.location.replace(window.location.origin + window.location.pathname);
+        }, 500);
+      }
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>GeoForge Navigator - Gaia GPS Benchmark</title>
   <meta name="description" content="Superstrakke technische GPS app voor buitengebruik. Plannen via paden, meten met een latje, POIs en historische kaarten.">
